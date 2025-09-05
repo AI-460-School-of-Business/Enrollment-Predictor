@@ -1,1 +1,1 @@
-# Course-Enrollment-Predictor
+# Enrollment-Predictor
