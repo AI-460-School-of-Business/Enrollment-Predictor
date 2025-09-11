@@ -9,13 +9,16 @@ o	Recommended extensions: Python, Docker
 o	Download: https://www.docker.com/products/docker-desktop
 o	Ensure Docker Engine is running (green light in Docker Desktop)
 ## Run Environment
-Build containers:
+• Build containers:
 ```docker-compose build```
-Start containers:
+
+• Start containers:
 ```docker-compose up```
-View logs:
+
+• View logs:
 ```docker-compose logs -f```
-Stop containers:
+
+• Stop containers:
 ```docker-compose down```
 ```docker-compose down -v```
 
