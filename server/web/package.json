@@ -1,0 +1,13 @@
+{
+  "name": "enrollment-predictor-ui",
+  "version": "1.0.0",
+  "description": "Frontend UI for CCSU Enrollment Predictor",
+  "scripts": {
+    "dev": "live-server public --port=3000 --proxy=/api:http://localhost:5000",
+    "start": "npm run dev",
+    "build": "echo No build step needed for vanilla JS"
+  },
+  "devDependencies": {
+    "live-server": "^1.2.2"
+  }
+}
