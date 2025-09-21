@@ -12,9 +12,11 @@ services:
       - postgres_data:/var/lib/postgresql/data/
 
   web:
-    build: ./backend
+    build:
+      context: .
+      dockerfile: Dockerfile
     volumes:
-      - ./backend:/app
+      - ./server:/app
     ports:
       - "5000:5000"
     env_file:
