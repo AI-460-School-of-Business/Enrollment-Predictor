@@ -1,0 +1,14 @@
+Group,Original Cohort (2023),Retained to 2nd Year (%) (2023),Graduated in 6 Years (%),,Description
+All Students,658,83,66,,"The dataset summarizes transfer student retention and six-year graduation rates by demographic groups, including gender and race/ethnicity. It shows cohort sizes for 2023, second-year retention percentages, and cumulative six-year graduation outcomes. The data highlights disparities across groups, with higher retention and completion rates among some populations (e.g., Asian, White, and Women) compared to others."
+Men,350,82,63,,
+Women,308,84,68,,
+American Indian or Alaska Native,1,0,50,,
+U.S. Nonresident,1,100,,,
+Black or African American,32,91,78,,
+Hispanic or Latino,77,82,58,,
+Native Hawaiian or Other Pacific Islander,1,100,50,,
+Two or More Races,13,92,83,,
+White,362,84,68,,
+Race/Ethnicity Unknown,24,83,53,,
+Asian,244,80,0,,
+Under-represented Minority*,251,80,60,,

@@ -1,0 +1,57 @@
+Department,Semester,UG CrHr,GR CrHr,Total CrHr,UG FTE,GR FTE,Total FTE,Description,,,,,,,,,,
+Accounting,Spring 2021,2505,564,3069,167,47,214,"This table shows the School of Business department-level Student Credit Hours (SCH) and Full-Time Equivalent (FTE) enrollments at CCSU from Spring 2021 through Spring 2025. It details undergraduate (UG) and graduate (GR) credit hours, total credit hours, and the conversion into standardized FTE enrollments.
+
+Column meanings:
+
+UG CrHr / GR CrHr – undergraduate and graduate credit hours taught.
+
+Total CrHr – combined UG + GR credit hours.
+
+UG FTE / GR FTE – full-time equivalent enrollments (UG SCH ÷ 15, GR SCH ÷ 12).
+
+Total FTE – combined FTE values for each department.
+
+Key Insights (Spring 2021–Spring 2025):
+
+Finance – consistently the strongest contributor, peaking at 3552 credit hours (239.6 FTEs) in Spring 2025.
+
+Accounting – steady performer with FTE totals in the 180–220 range, ending at 211.2 FTEs in Spring 2025.
+
+Management & Organization – held mid-level contributions, with FTE values between 155–169, finishing at 170.3 FTEs in Spring 2025.
+
+Marketing – showed growth over time, from 135.8 FTEs in Spring 2021 to 160.9 FTEs in Spring 2025.
+
+Management Information Systems (MIS) – consistently the smallest department, ranging from 84–97 FTEs.",,,,,,,,,,
+Finance,Spring 2021,3369,177,3546,224.6,14.8,239.4,,,,,,,,,,,
+Management & Organization,Spring 2021,2103,354,2457,140.2,29.5,169.7,,,,,,,,,,,
+Management Information Systems,Spring 2021,1054,150,1204,70.3,12.5,82.8,,,,,,,,,,,
+Marketing,Spring 2021,1804,186,1990,120.3,15.5,135.8,,,,,,,,,,,
+Accounting,Spring 2022,2230,360,2590,148.7,30,178.7,,,,,,,,,,,
+Finance,Spring 2022,2993,150,3143,199.5,12.5,212,,,,,,,,,,,
+Management & Organization,Spring 2022,1947,324,2271,129.8,27,156.8,,,,,,,,,,,
+Management Information Systems,Spring 2022,1121,114,1235,74.7,9.5,84.2,,,,,,,,,,,
+Marketing,Spring 2022,1570,174,1744,104.7,14.5,119.2,,,,,,,,,,,
+Accounting,Spring 2023,2318,375,2693,154.5,31.3,185.8,,,,,,,,,,,
+Finance,Spring 2023,3031,210,3241,202.1,17.5,219.6,,,,,,,,,,,
+Management & Organization,Spring 2023,2042,237,2279,136.1,19.8,155.9,,,,,,,,,,,
+Management Information Systems,Spring 2023,1197,144,1341,79.8,12,91.8,,,,,,,,,,,
+Marketing,Spring 2023,1749,249,1998,116.6,20.8,137.4,,,,,,,,,,,
+Accounting,Spring 2024,2412,489,2901,160.8,40.8,201.7,,,,,,,,,,,
+Finance,Spring 2024,3087,201,3288,205.8,16.8,222.6,,,,,,,,,,,
+Management & Organization,Spring 2024,2021,231,2252,134.7,19.3,154,,,,,,,,,,,
+Management Information Systems,Spring 2024,1241,123,1364,82.7,10.3,93,,,,,,,,,,,
+Marketing,Spring 2024,1664,225,1889,110.9,18.8,129.7,,,,,,,,,,,
+Accounting,Spring 2025,2703,378,3081,180.2,31.5,211.7,,,,,,,,,,,
+Finance,Spring 2025,3387,165,3552,225.8,13.8,239.6,,,,,,,,,,,
+Management & Organization,Spring 2025,2246,303,2549,149.7,25.3,175,,,,,,,,,,,
+Management Information Systems,Spring 2025,1260,159,1419,84,13.3,97.3,,,,,,,,,,,
+Marketing,Spring 2025,2069,273,2342,137.9,22.8,160.7,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,

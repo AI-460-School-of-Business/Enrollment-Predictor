@@ -1,0 +1,12 @@
+Year,Original Cohort,Retained to 2nd Year (N),Retained to 2nd Year (%),Completers in 2 Years (cum %),Completers in 3 Years (cum %),Completers in 4 Years (cum %),Completers in 5 Years (cum %),Completers in 6 Years (cum %),Completers in 7 Years (cum %),Completers in 8 Years (cum %),,,Description
+2013,814,632,78,15,39,55,61,64,66,66,,,"The dataset tracks full-time transfer students from 2013–2023, showing original cohort sizes, second-year retention counts and percentages, and cumulative graduation rates up to eight years. The data indicates relatively strong second-year retention (around 78–85%) and steady increases in completion rates, with over 60% of transfer students completing their degrees within 4–6 years."
+2014,869,686,79,14,38,54,59,61,63,64,,,
+2015,871,685,79,15,40,56,62,63,66,67,,,
+2016,827,662,80,15,45,60,65,67,68,69,,,
+2017,795,652,82,20,47,62,66,69,70,,,,
+2018,771,609,79,19,43,58,64,66,,,,,
+2019,715,606,85,17,45,60,64,,,,,,
+2020,623,491,79,20,46,60,,,,,,,
+2021,586,486,83,26,53,,,,,,,,
+2022,609,510,84,23,,,,,,,,,
+2023,658,546,83,,,,,,,,,,

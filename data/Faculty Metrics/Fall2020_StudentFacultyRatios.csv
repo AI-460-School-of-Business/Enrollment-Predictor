@@ -1,0 +1,75 @@
+School/Division,Home Department,Full-time Faculty (Facfile FT),Full-time Faculty with Instructional Load Credits (A),Part-time FTE Faculty (PT Load / 12) (B),FTE Faculty (A+B) (C),FTE Students (D),Ratio of Students to FTE Faculty (D/(A+B)) (E)
+College of Liberal Arts & Social Sciences,Anthropology,5,4,1,5,88.1,17.6
+College of Liberal Arts & Social Sciences,Art,10,10,5.67,15.67,127.3,8.1
+College of Liberal Arts & Social Sciences,Communication,13,12,5.5,17.5,269.7,15.4
+College of Liberal Arts & Social Sciences,Criminology & Criminal Justice,14,14,3.16,17.16,277.6,16.2
+College of Liberal Arts & Social Sciences,Design (Graphic/Information),5,4,0.5,4.5,49.1,10.9
+College of Liberal Arts & Social Sciences,Economics,7,7,0.5,7.5,183.4,24.5
+College of Liberal Arts & Social Sciences,English,29,25,17.29,42.29,577.9,13.7
+College of Liberal Arts & Social Sciences,Geography,9,9,2.5,11.5,193.9,16.9
+College of Liberal Arts & Social Sciences,History,16,16,5.46,21.46,351.9,16.4
+College of Liberal Arts & Social Sciences,Journalism,5,5,0,5,46.6,9.3
+College of Liberal Arts & Social Sciences,"World Languages, Literatures & Cultures",10,10,7.5,17.5,209.7,12
+College of Liberal Arts & Social Sciences,Music,7,7,4.87,11.87,123.4,10.4
+College of Liberal Arts & Social Sciences,Philosophy,6,6,5.17,11.17,225.7,20.2
+College of Liberal Arts & Social Sciences,Political Science,7,6,2.25,8.25,133.9,16.2
+College of Liberal Arts & Social Sciences,Psychological Science,20,20,6.48,26.48,572.3,21.6
+College of Liberal Arts & Social Sciences,Sociology,10,9,2.33,11.33,191.9,16.9
+College of Liberal Arts & Social Sciences,Theatre,4,4,1.17,5.17,56.4,10.9
+College of Liberal Arts & Social Sciences,Total,177,168,71.35,239.35,3678.8,15.4
+School of Business,Accounting,15,15,1,16,274.6,17.2
+School of Business,Finance,9,9,5.25,14.25,264.1,18.5
+School of Business,Management & Organization,12,12,2,14,211,15.1
+School of Business,Management Information Systems,6,6,2.79,8.79,134.6,15.3
+School of Business,Marketing,9,9,3.5,12.5,219.3,17.5
+School of Business,Total,51,51,14.54,65.54,1103.6,16.8
+School of Education & Professional Studies,Counselor Education & Family Therapy,9,9,6.5,15.5,199.3,12.9
+School of Education & Professional Studies,"Educational Leadership, Policy & Instructional Technology",13,13,6.73,19.73,174.3,8.8
+School of Education & Professional Studies,"Literacy, Elementary & Early Childhood Education",10,9,2.21,11.21,130.1,11.6
+School of Education & Professional Studies,Nursing,9,9,12.49,21.49,138.5,6.4
+School of Education & Professional Studies,Physical Edu. & Human Performance,17,17,4.78,21.78,324.2,14.9
+School of Education & Professional Studies,Social Work,5,5,2.05,7.05,91,12.9
+School of Education & Professional Studies,Special Education & Interventions,8,8,3.26,11.26,108.3,9.6
+School of Education & Professional Studies,Total,71,70,38.02,108.02,1165.7,10.8
+"School of Engineering, Science & Technology",Biology,16,16,6.64,22.64,286.3,12.6
+"School of Engineering, Science & Technology",Biomolecular Sciences,9,9,3.92,12.92,167.5,13
+"School of Engineering, Science & Technology",Chemistry & Biochemistry,9,9,1.75,10.75,148.9,13.9
+"School of Engineering, Science & Technology",Computer Electronics & Graphics Technology,8,8,7.72,15.72,166.2,10.6
+"School of Engineering, Science & Technology",Computer Science,10,10,3.58,13.58,203.6,15
+"School of Engineering, Science & Technology",Engineering,19,19,7.67,26.67,318.8,12
+"School of Engineering, Science & Technology",Geological Sciences,7,7,2.58,9.58,107.1,11.2
+"School of Engineering, Science & Technology",Manufacturing & Construction Management,12,12,7.08,19.08,225,11.8
+"School of Engineering, Science & Technology",Mathematical Sciences,30,29,21.19,50.19,773.7,15.4
+"School of Engineering, Science & Technology",Physics & Engineering Physics,5,5,5.95,10.95,84.3,7.7
+"School of Engineering, Science & Technology",Technology & Engineering Education,4,4,1.79,5.79,41.6,7.2
+"School of Engineering, Science & Technology",Total,129,128,69.87,197.87,2523,12.8
+No School,Total,0,0,0.17,0.17,13.1,77.1
+University,University Total,428,417,193.95,610.95,8484.2,13.9
+,,,,,,,
+"Overview:
+The Fall 2020 Student–Faculty Ratios Excel file provides CCSU departmental data on teaching capacity and student enrollment. It compares the number of full-time (FT) and part-time (PT) faculty, their instructional loads expressed as FTEs, and the number of students served. The final ratio shows how many students each FTE faculty member supports, offering a clear view of instructional workload distribution across the university.
+
+Abbreviations Explained:
+
+Facfile FT = Full-time Faculty (headcount)
+
+A = Full-time Faculty with Instructional Load Credits
+
+B = Part-time Faculty expressed in Full-Time Equivalent (PT Load ÷ 12)
+
+C (A+B) = FTE Faculty – combined FT and PT faculty expressed as full-time equivalents
+
+D = FTE Students – student enrollment expressed as full-time equivalents
+
+E (D/(A+B)) = Ratio of Students to FTE Faculty",,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,

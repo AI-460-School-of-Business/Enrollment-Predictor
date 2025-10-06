@@ -1,0 +1,90 @@
+School/Department,FT Faculty Headcount,FT Student Credit Hr,FT Credit Hr/Faculty,FT Student Headcount,FT Student Headcount/Faculty,FT Sections Taught,PT Faculty Headcount,PT Student Credit Hr,PT Credit Hr/Faculty,PT Student Headcount,PT Student Headcount/Faculty,PT Sections Taught,% Credit Hr by FT Faculty,% Credit Hr by PT Faculty
+Anthropology,5,1811,362,617,123,20,3,384,128,128,43,3,82.5%,17.5%
+Art,11,1640,149,543,49,66,17,1203,71,401,24,31,57.7%,42.3%
+Communication,13,3076,237,1016,78,52,10,1416,142,472,47,17,68.5%,31.5%
+Criminology & Criminal Justice,15,3134,209,1043,70,55,12,971,81,324,27,13,76.4%,23.6%
+Design (Graphic Information),5,765,153,255,51,22,2,183,92,61,31,3,80.7%,19.3%
+Economics,7,2780,397,927,132,26,2,388,194,129,65,3,87.7%,12.3%
+English,29,5635,194,1910,66,105,38,3922,103,1307,34,91,59.0%,41.0%
+Geography,9,2125,236,691,77,46,7,879,126,293,42,10,70.7%,29.3%
+History,18,3434,191,1131,63,74,19,3134,165,1042,55,32,52.3%,47.7%
+Journalism,6,596,99,196,33,21,1,186,186,62,62,3,76.2%,23.8%
+Modern Languages,10,1600,160,524,52,46,15,1630,109,543,36,23,49.5%,50.5%
+Music,9,1003,111,509,57,49,25,1120,45,472,19,61,47.3%,52.7%
+Philosophy,7,1613,230,534,76,28,7,872,125,291,42,9,64.9%,35.1%
+Political Science,7,1613,230,541,77,32,6,573,96,191,32,7,73.8%,26.2%
+Psychological Science,19,6355,334,2135,112,91,16,2476,155,858,54,25,72.0%,28.0%
+Sociology,10,2405,241,773,77,40,4,812,203,271,68,8,74.8%,25.2%
+Theatre,6,821,137,381,64,40,3,669,223,223,74,4,55.1%,44.9%
+TOTAL (CLAS),197,43206,219,14618,74,833,209,20188,97,6836,33,364,68.2%,31.8%
+Accounting,14,3327,238,1103,79,44,8,1215,152,405,51,13,73.3%,26.7%
+Finance,9,2131,237,703,78,29,5,787,157,263,53,8,73.0%,27.0%
+Management & Organization,11,2806,255,935,85,34,6,534,89,178,30,6,84.0%,16.0%
+Management Information Systems,7,1372,196,464,66,23,9,1334,148,445,49,13,50.7%,49.3%
+Marketing,8,1970,246,657,82,27,4,499,125,167,42,6,79.8%,20.2%
+TOTAL (Business),49,11606,237,3862,79,157,32,4369,137,1458,46,46,72.7%,27.3%
+Counselor Education & Family Therapy,10,1404,140,441,44,38,23,1380,60,448,19,37,50.5%,49.5%
+"Educational Leadership, Policy & Instructional Tech.",16,1667,104,665,42,47,25,1150,46,506,20,36,59.2%,40.8%
+"Literacy, Elementary & Early Childhood Education",11,1465,133,485,44,40,13,435,33,115,9,14,77.1%,22.9%
+Nursing,8,1610,201,536,67,29,14,160,11,214,15,20,91.0%,9.0%
+Physical Edu. & Human Performance,17,3272,193,1399,82,78,21,1644,78,703,33,35,66.6%,33.4%
+Social Work,4,830,208,277,69,15,14,1178,84,390,28,18,41.3%,58.7%
+Special Education & Interventions,7,928,133,304,43,25,10,327,33,109,11,13,74.0%,26.0%
+TOTAL (Ed & Prof. Studies),73,11176,153,4107,56,272,120,6274,52,2485,21,173,64.0%,36.0%
+Biology,15,4520,301,1517,101,100,7,416,59,240,34,12,91.6%,8.4%
+Biomolecular Sciences,8,2211,276,873,109,38,6,449,75,154,26,7,83.1%,16.9%
+Chemistry & Biochemistry,9,2255,251,900,100,38,9,919,102,460,51,20,71.1%,28.9%
+Computer Electronics & Graphics Technology,8,1163,145,387,48,31,9,1049,117,350,39,16,52.6%,47.4%
+Computer Science,9,1890,210,641,71,39,6,591,99,197,33,11,76.1%,23.9%
+Engineering,18,3781,210,1393,77,85,12,996,83,371,31,19,79.2%,20.8%
+Geological Sciences,7,1584,226,507,72,28,7,328,47,196,28,10,82.8%,17.2%
+Manufacturing & Construction Management,13,2240,172,754,58,52,14,1045,75,348,25,22,68.2%,31.8%
+Mathematical Sciences,29,6819,235,1995,69,118,56,7527,134,2520,45,95,47.5%,52.5%
+Physics & Engineering Physics,5,1140,228,314,63,26,12,343,29,129,11,5,76.9%,23.1%
+Technology & Engineering Education,4,743,186,243,61,18,4,225,56,75,19,7,76.7%,23.3%
+"TOTAL (Eng, Sci & Tech)",125,29426,235,9524,76,680,142,13488,95,4540,32,222,68.6%,31.4%
+No School TOTAL,0,0,,0,,0,1,408,408,208,208,22,0.0%,100.0%
+UNIVERSITY TOTAL,454,95414,210,15099,72,942,504,44727,89,15327,30,827,68.1%,31.9%
+,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,
+,"Overview:
+The Fall 2018 Excel file provides Central Connecticut State University’s Faculty & Student Credit Hour, Student Headcount Report. It summarizes teaching loads, student credit hours, course sections, and enrollment figures across departments, comparing contributions of full-time (FT) and part-time (PT) faculty. The dataset also shows the percentage of total student credit hours delivered by each group, giving a clear picture of instructional distribution.
+
+Abbreviations Explained:
+
+FT = Full-Time (faculty employed full-time)
+
+PT = Part-Time (faculty employed part-time)
+
+Faculty Headcount = Number of faculty members teaching courses
+
+Student Credit Hr = Total number of student credit hours taught (a measure of instructional workload)
+
+Credit Hr/Faculty = Average student credit hours taught per faculty member
+
+Student Headcount = Total number of students enrolled in courses taught
+
+Student Headcount/Faculty = Average number of students per faculty member
+
+Sections Taught = Number of course sections delivered
+
+% Credit Hr by FT Faculty / PT Faculty = Share of credit hours taught by full-time vs. part-time faculty",,,,,,,,,,,,,
+,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,

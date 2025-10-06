@@ -1,0 +1,293 @@
+,,,,,Term ,Fall 2020,Fall 2021,Fall 2022,Fall 2023,Fall 2024,Description,,,,,,,,,,,,,,,,,,,,,,,,,,
+Program's School,Department,Program Name,Credential ,OHE,CIP,N,N,N,N,N,"This dataset is a comprehensive program-level enrollment report for CCSU across Fall 2020 through Fall 2024. It lists every program under its school, department, program name, and credential, with student headcounts (N) reported for each fall term.
+
+Structure of the Data
+
+Program’s School – main college/school (e.g., Arts & Social Sciences, Business, Education, Health & Rehabilitation Sciences, Engineering, No School/Inter-School).
+
+Department – academic department housing the program.
+
+Program Name – specific degree, certificate, or track (e.g., Criminology BA, Nursing BSN, Computer Science BS).
+
+Credential – type of award:
+
+BA/BS = Bachelor of Arts/Science
+
+BS-Teach = Bachelor of Science in Education/Teaching
+
+MA/MS = Master of Arts/Science
+
+GRADCERT = Graduate Certificate
+
+SYC = Sixth-Year Certificate
+
+OCP = Official Certificate Program
+
+PM CERT = Post-Master’s Certificate
+
+MBA/MAT/MSW/DNAP = Professional master’s/doctoral degrees (e.g., MBA, Master of Arts in Teaching, Master of Social Work, Doctor of Nurse Anesthesia Practice)
+
+OHE / CIP – official program codes for state and federal reporting.
+
+N (Fall 2020–Fall 2024) – enrollment headcounts by semester.
+
+Key Insights (Highlights)
+
+Largest Programs (Fall 2024):
+
+Psychological Science (BA): 508 students – consistently the single largest undergraduate program.
+
+Nursing (BSN): 479 students – showing steady and significant growth since Fall 2020 (232 ? 479).
+
+Criminology (BA): 443 students – large and stable with minor declines over time.
+
+Computer Science (BS): 366 students – strong growth peaking at 459 in 2023, slight dip in 2024.
+
+Mechanical Engineering (BS): 275 students – steady with slight growth.
+
+Growing Areas:
+
+Cybersecurity (BS): 78 ? 164 (2020–2024), doubling in size.
+
+Data Science (MS): 40 ? 79, showing demand at the graduate level.
+
+Counselor Education (MS): 183 ? 170 (slight dip but still strong).
+
+Nurse Anesthesia (DNAP): 73 ? 94, steady rise.
+
+Declining Areas:
+
+English (BA): 98 ? 83, flat after years of decline.
+
+History (BA): 81 ? 60, trending downward.
+
+Journalism (BA): 66 ? 42, consistent decline.
+
+Anthropology (BA): 34 ? 19, steady drop.
+
+General undecided majors decreased in Arts & Sciences (33 ? 37, fairly stable) but fluctuated elsewhere.
+
+Education Programs:
+
+Elementary Education (BS-Teach): 322 ? 251, declining steadily.
+
+Special Education (MS): 146 ? 126, small decline but still strong.
+
+Educational Leadership (EDD & SYC): stable around 200–220 until 2024 when the SYC dropped to 169.
+
+Business Programs:
+
+Accounting (BS): 379 ? 260, noticeable decline.
+
+Finance (BS): stable ~270 students.
+
+Management (BS): 390 ? 238, long-term downward trend.
+
+Marketing (BS): 274 ? 258, fairly steady.
+
+MBA: 203 ? 158, small but steady decline.
+
+University Totals:
+
+Enrollment decreased from 10,652 (Fall 2020) to 9,997 (Fall 2024).
+
+Largest losses occurred between Fall 2020 ? Fall 2022, with stabilization and slight rebound after Fall 2023.",,,,,,,,,,,,,,,,,,,,,,,,,,
+Arts & Social Sciences,Art & Design,Art,BA,02519,500701,43,40,50,51,52,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Arts & Social Sciences,Art & Design,Art Education,BS-Teach,00054,131302,44,37,50,56,54,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Arts & Social Sciences,Art & Design,Art Education,GRADCERT,10167,131302,11,10,5,13,16,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Arts & Social Sciences,Art & Design,Art Education,MS,00055,131302,11,12,10,13,12,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Arts & Social Sciences,Art & Design,Graphic/Information Design,BA,07020,500401,146,140,156,142,132,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Arts & Social Sciences,Art & Design,Information Design,MA,06297,500401,12,10,6,4,2,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Arts & Social Sciences,Communication,Media Studies,BA,18099,090102,116,98,103,95,76,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Arts & Social Sciences,Communication,Public Relations/Promotions,OCP,14632,090902,,,1,1,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Arts & Social Sciences,Communication,Strategic Communication,BA,18107,090900,141,135,143,122,114,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Arts & Social Sciences,Communication,Strategic Communication,MS,02522,090901,31,22,18,23,22,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Arts & Social Sciences,Criminology & Criminal Justice,Advanced Detective Certificate,OCP,19979,430114,,5,10,5,5,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Arts & Social Sciences,Criminology & Criminal Justice,Criminal Justice,MS,02965,430104,25,26,40,30,31,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Arts & Social Sciences,Criminology & Criminal Justice,Criminal Justice Administration,MA,22064,430103,,,,,8,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Arts & Social Sciences,Criminology & Criminal Justice,Criminal Justice Leadership,OCP,22209,430103,,,,,1,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Arts & Social Sciences,Criminology & Criminal Justice,Criminology,BA,03127,450401,563,487,444,429,443,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Arts & Social Sciences,Criminology & Criminal Justice,Detective Certificate,C1,19982,430114,,5,1,3,2,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Arts & Social Sciences,Criminology & Criminal Justice,Victim Advocacy,OCP,22229,440201,,,,,1,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Arts & Social Sciences,Economics,Economics,BA,00104,450601,90,82,81,57,49,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Arts & Social Sciences,English,Applied Linguistics,MA,00070,131401,21,19,16,16,9,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Arts & Social Sciences,English,English,BA,00079,230101,98,82,96,83,83,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Arts & Social Sciences,English,English,BS-Teach,00079,230101,61,49,40,53,46,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Arts & Social Sciences,English,English,GRADCERT,10605,230101,2,4,5,2,5,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Arts & Social Sciences,English,English,MA,00080,230101,19,11,15,17,18,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Arts & Social Sciences,English,Teaching English to Speakers of Other Languages,GRADCERT,10609,131401,16,13,11,14,21,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Arts & Social Sciences,English,Teaching English to Speakers of Other Languages,OCP,15703,131401,4,3,2,2,1,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Arts & Social Sciences,"Geography, Anthropology, & Tourism",Anthropology,BA,00103,450201,34,27,22,21,19,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Arts & Social Sciences,"Geography, Anthropology, & Tourism",Geography,BA,00105,450701,28,24,21,28,28,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Arts & Social Sciences,"Geography, Anthropology, & Tourism",Geography,MS,00106,450701,17,10,8,6,9,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Arts & Social Sciences,"Geography, Anthropology, & Tourism",Tourism & Hospitality Studies,BS,04091,520901,45,43,31,24,27,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Arts & Social Sciences,History,History,BA,00107,540101,81,79,81,64,60,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Arts & Social Sciences,History,History,BS-Teach,00107,540101,87,75,86,90,92,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Arts & Social Sciences,History,History,GRADCERT,10172,540101,4,7,7,8,10,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Arts & Social Sciences,History,History,MA,00108,540101,9,10,9,16,10,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Arts & Social Sciences,History,Public History,MA,09702,540105,16,19,18,17,19,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Arts & Social Sciences,Journalism,Journalism,BA,15031,090401,66,58,49,48,42,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Arts & Social Sciences,Music,Music,BA,02608,500901,11,12,14,16,21,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Arts & Social Sciences,Music,Music Education,BS-Teach,00062,131312,38,29,24,24,26,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Arts & Social Sciences,Music,Music Education,GRADCERT,10174,131312,2,3,3,2,2,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Arts & Social Sciences,Music,Music Education,MS,00063,131312,5,4,2,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Arts & Social Sciences,Music,Music Education,Post-Master's Study,88888,,1,1,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Arts & Social Sciences,Philosophy,Philosophy,BA,00088,380101,13,11,8,11,9,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Arts & Social Sciences,Political Science,Political Science,BA,00109,451001,104,98,90,92,94,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Arts & Social Sciences,Psychological Science,Gerontology,C1,20603,190702,,,,1,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Arts & Social Sciences,Psychological Science,Gerontology,OCP,18714,190702,8,3,1,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Arts & Social Sciences,Psychological Science,Psychological Science,BA,00098,420101,596,563,546,515,508,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Arts & Social Sciences,Psychological Science,Psychology,MA,00099,420101,44,51,41,49,51,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Arts & Social Sciences,Sociology,Sociology,BA,00110,451101,96,81,76,82,83,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Arts & Social Sciences,Theatre,Theatre,BA,00111,500501,25,21,22,19,12,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Arts & Social Sciences,Theatre,Theatre,BFA,00111,500501,23,23,16,21,27,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Arts & Social Sciences,"World Languages, Literatures, & Cultures",French,BA,00073,160901,1,1,1,3,1,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Arts & Social Sciences,"World Languages, Literatures, & Cultures",French,BS-Teach,00073,160901,1,,1,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Arts & Social Sciences,"World Languages, Literatures, & Cultures","French, German, Italian & Spanish",GRADCERT,10171,131306,3,7,10,7,11,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Arts & Social Sciences,"World Languages, Literatures, & Cultures",German,BA,00072,160501,1,1,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Arts & Social Sciences,"World Languages, Literatures, & Cultures",Italian,BA,00075,160902,2,2,1,2,2,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Arts & Social Sciences,"World Languages, Literatures, & Cultures",Italian,BS-Teach,00075,160902,2,1,1,1,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Arts & Social Sciences,"World Languages, Literatures, & Cultures",Modern Languages,MA,00074,160101,23,14,14,6,20,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Arts & Social Sciences,"World Languages, Literatures, & Cultures",Modern Languages,MA,18263,160101,23,24,12,13,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Arts & Social Sciences,"World Languages, Literatures, & Cultures",Spanish,BA,00076,160905,17,13,8,7,6,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Arts & Social Sciences,"World Languages, Literatures, & Cultures",Spanish,BS-Teach,00076,160905,9,14,17,15,14,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Arts & Social Sciences,~No Dept/Shared,General Studies,BGS,20405,240102,,,17,33,42,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Arts & Social Sciences,~No Dept/Shared,International Studies,BA,02693,302001,34,29,16,19,23,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Arts & Social Sciences,~No Dept/Shared,International Studies,MS,00035,302001,13,12,12,12,16,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Arts & Social Sciences,~No Dept/Shared,Racial Justice,C1,20623,302301,,,,2,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Arts & Social Sciences,~No Dept/Shared,Special Studies,BA,00087,309999,1,,1,2,1,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Arts & Social Sciences,~No Dept/Shared,Undecided (Arts & Sciences),BA,88888,,33,31,31,33,37,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Arts & Social Sciences,Total,Total,Total,Total,Total,2970,2691,2620,2540,2525,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Business,Accounting,Accounting,BS,00036,520301,379,314,301,279,260,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Business,Accounting,Accounting,MS,18549,520301,82,82,59,67,58,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Business,Accounting,Accounting,OCP,19351,520301,2,,,1,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Business,Accounting,Accounting Analytics,OCP,20602,307199,,,,1,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Business,Business (Joint Program),Business,BS,21384,520101,,,,74,194,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Business,Business Analytics (Joint Program),Business Analytics,BS,21711,307102,,,,1,50,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Business,Business Analytics (Joint Program),Business Analytics,OCP,22039,307102,,,,,2,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Business,Business Leadership (Joint Program),Business Leadership,OCP,19978,520213,11,13,17,2,6,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Business,Finance,Commercial Lending,OCP,20237,520809,,,2,,1,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Business,Finance,Finance,BS,02650,520801,273,287,267,277,277,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Business,Management & Organization,Management,BS,00037,520201,390,338,315,296,238,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Business,Management Information Systems,Management Information Systems,BS,02380,110401,121,105,100,95,99,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Business,Marketing,Marketing,BS,00039,521401,274,259,268,281,258,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Business,Master of Business Administration,Master of Business Administration,MBA,02816,520305,203,169,153,163,158,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Business,Master of Business Administration,Supply Chain Analytics,OCP,19446,521301,1,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Business,~No Dept/Shared,General Studies,BGS,20405,240102,,,6,8,10,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Business,~No Dept/Shared,Undecided (Business),BS,88888,,138,116,121,125,111,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Business,Total,Total,Total,Total,Total,1874,1683,1609,1670,1722,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Education,Curriculum & Instruction,Teacher Education,MAT,14255,130101,10,1,11,6,1,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Education,Curriculum & Instruction,Teacher Leadership,MS,05642,130401,28,35,26,22,15,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Education,Educational Leadership & Instructional Technology,Educational Leadership,ED.D,09981,130401,59,53,66,60,69,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Education,Educational Leadership & Instructional Technology,Educational Leadership,SYC,02597,130401,214,215,224,220,169,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Education,Educational Leadership & Instructional Technology,Educational Technology,MS,00045,130501,15,27,27,19,12,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Education,Educational Leadership & Instructional Technology,"Superintendent of Schls, Advan",PM CERT,14633,130411,15,15,13,10,9,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Education,"Literacy, Elementary, & Early Childhood Education",Early Childhood and Infant/Toddler Mental Health,BS,19028,131210,58,65,70,62,44,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Education,"Literacy, Elementary, & Early Childhood Education",Elementary Education,BS-Teach,00050,131202,322,288,277,263,251,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Education,"Literacy, Elementary, & Early Childhood Education",Elementary Education,GRADCERT,10181,131202,7,12,10,8,5,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Education,"Literacy, Elementary, & Early Childhood Education",Elementary Education,MS,00051,131202,,,,,12,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Education,"Literacy, Elementary, & Early Childhood Education",Reading and Language Arts,MS,00066,131315,49,40,35,36,35,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Education,"Literacy, Elementary, & Early Childhood Education",Reading and Language Arts,PM CERT,10607,131315,4,3,1,2,1,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Education,"Literacy, Elementary, & Early Childhood Education",Reading and Language Arts,SYC,00067,131315,35,23,29,39,42,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Education,Special Education & Interventions,Special Education,BS-Teach,22324,131001,,,,,3,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Education,Special Education & Interventions,Special Education,GRADCERT,10180,131001,,1,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Education,Special Education & Interventions,Special Education,MS,00048,131001,146,123,100,113,126,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Education,Special Education & Interventions,Transition Specialist,OCP,18965,131001,,1,3,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Education,~No Dept/Shared,General Studies,BGS,20405,240102,,,1,4,1,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Education,Total,Total,Total,Total,Total,962,902,893,864,795,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Health & Rehabilitation Sciences,Counselor Education & Family Therapy,Counselor Education,MS,00049,131101,183,158,133,140,170,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Health & Rehabilitation Sciences,Counselor Education & Family Therapy,Marriage & Family Therapy,MS,06159,511505,114,100,68,50,44,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Health & Rehabilitation Sciences,Counselor Education & Family Therapy,Professional Counseling,PM CERT,14631,422803,18,17,15,17,7,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Health & Rehabilitation Sciences,Nurse Anesthesia Practice,Nurse Anesthesia Practice,DNAP,18266,513804,73,78,85,90,94,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Health & Rehabilitation Sciences,Nursing,Nursing,BSN,14729,513801,232,274,335,396,479,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Health & Rehabilitation Sciences,Nursing,Nursing (RN to BSN),BSN,00078,513801,21,20,22,27,24,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Health & Rehabilitation Sciences,Nursing,Nursing: Hospice and Palliative Care,MSN,19027,513818,10,12,11,13,9,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Health & Rehabilitation Sciences,Physical Education & Human Performance,Athletic Training,BS,06923,510913,21,3,1,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Health & Rehabilitation Sciences,Physical Education & Human Performance,Athletic Training,MS,19546,510913,,,3,5,9,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Health & Rehabilitation Sciences,Physical Education & Human Performance,Dance Education,BS,18177,131324,2,5,7,9,13,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Health & Rehabilitation Sciences,Physical Education & Human Performance,Dance Education,BS-Teach,18177,131324,18,16,19,13,19,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Health & Rehabilitation Sciences,Physical Education & Human Performance,Exercise Science,BS,17363,310505,238,225,242,277,279,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Health & Rehabilitation Sciences,Physical Education & Human Performance,Physical Education,BS-Teach,00064,131314,100,81,74,91,89,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Health & Rehabilitation Sciences,Physical Education & Human Performance,Physical Education,GRADCERT,10178,131314,4,19,19,15,17,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Health & Rehabilitation Sciences,Physical Education & Human Performance,Physical Education,MS,00065,131314,19,19,16,21,18,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Health & Rehabilitation Sciences,Social Work,Social Work,BA,02556,440701,254,227,184,181,214,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Health & Rehabilitation Sciences,Social Work,Social Work,MSW,22267,511503,,,,,29,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Health & Rehabilitation Sciences,Total,Total,Total,Total,Total,1307,1254,1234,1345,1514,,,,,,,,,,,,,,,,,,,,,,,,,,,
+"Engineering, Science & Technology",Biochemistry (Joint Program),Biochemistry,BS,13670,260202,27,27,26,23,19,,,,,,,,,,,,,,,,,,,,,,,,,,,
+"Engineering, Science & Technology",Biology,Biological Sciences,MA,00083,260101,6,8,10,11,5,,,,,,,,,,,,,,,,,,,,,,,,,,,
+"Engineering, Science & Technology",Biology,Biological Sciences,MS,00083,260101,9,7,7,6,4,,,,,,,,,,,,,,,,,,,,,,,,,,,
+"Engineering, Science & Technology",Biology,Biology,BS,00082,260101,367,323,272,295,288,,,,,,,,,,,,,,,,,,,,,,,,,,,
+"Engineering, Science & Technology",Biology,Biology,BS-Teach,00082,260101,14,7,5,5,11,,,,,,,,,,,,,,,,,,,,,,,,,,,
+"Engineering, Science & Technology",Biology,Biology,GRADCERT,10603,260101,4,3,3,2,1,,,,,,,,,,,,,,,,,,,,,,,,,,,
+"Engineering, Science & Technology",Biomolecular Sciences,Biomolecular Sciences,BS,13445,260204,131,87,63,69,69,,,,,,,,,,,,,,,,,,,,,,,,,,,
+"Engineering, Science & Technology",Biomolecular Sciences,Biomolecular Sciences,MS,13446,260204,22,16,21,22,25,,,,,,,,,,,,,,,,,,,,,,,,,,,
+"Engineering, Science & Technology",Chemistry & Biochemistry,Chemistry,BS,00090,400501,33,30,25,27,24,,,,,,,,,,,,,,,,,,,,,,,,,,,
+"Engineering, Science & Technology",Chemistry & Biochemistry,Chemistry,BS-Teach,00090,400501,3,5,9,6,3,,,,,,,,,,,,,,,,,,,,,,,,,,,
+"Engineering, Science & Technology",Computer Electronics & Graphics Technology,Computer Engineering Technology,BS,13269,151201,123,112,85,90,104,,,,,,,,,,,,,,,,,,,,,,,,,,,
+"Engineering, Science & Technology",Computer Electronics & Graphics Technology,Electrical Engineering,BS,19943,141001,2,14,27,42,56,,,,,,,,,,,,,,,,,,,,,,,,,,,
+"Engineering, Science & Technology",Computer Electronics & Graphics Technology,Electronics Technology,BS,09933,150303,31,32,24,22,21,,,,,,,,,,,,,,,,,,,,,,,,,,,
+"Engineering, Science & Technology",Computer Electronics & Graphics Technology,Graphics Technology,BS,17362,110801,20,19,17,18,13,,,,,,,,,,,,,,,,,,,,,,,,,,,
+"Engineering, Science & Technology",Computer Electronics & Graphics Technology,Networking Information Technology,BS,17364,111001,88,75,70,61,68,,,,,,,,,,,,,,,,,,,,,,,,,,,
+"Engineering, Science & Technology",Computer Information Technology (Joint Program),Computer Information Technology,MS,06901,110103,37,21,23,29,28,,,,,,,,,,,,,,,,,,,,,,,,,,,
+"Engineering, Science & Technology",Computer Science,Computer Science,BA,22357,110101,,,,,83,,,,,,,,,,,,,,,,,,,,,,,,,,,
+"Engineering, Science & Technology",Computer Science,Computer Science,BS,00043,110101,381,365,402,459,366,,,,,,,,,,,,,,,,,,,,,,,,,,,
+"Engineering, Science & Technology",Computer Science,Software Engineering,MS,18966,140903,21,22,16,12,18,,,,,,,,,,,,,,,,,,,,,,,,,,,
+"Engineering, Science & Technology",Computer Science,Software Engineering,OCP,20622,140903,,,,,1,,,,,,,,,,,,,,,,,,,,,,,,,,,
+"Engineering, Science & Technology",Cybersecurity (Joint Program),Cybersecurity,BS,19464,111003,78,113,130,150,164,,,,,,,,,,,,,,,,,,,,,,,,,,,
+"Engineering, Science & Technology",Earth & Space Sciences,Earth Sciences,BS,00092,400601,41,40,36,39,43,,,,,,,,,,,,,,,,,,,,,,,,,,,
+"Engineering, Science & Technology",Earth & Space Sciences,Earth Sciences,BS-Teach,00092,400601,2,1,2,3,5,,,,,,,,,,,,,,,,,,,,,,,,,,,
+"Engineering, Science & Technology",Earth & Space Sciences,Science Education,GRADCERT,10176,131316,2,3,1,1,2,,,,,,,,,,,,,,,,,,,,,,,,,,,
+"Engineering, Science & Technology",Engineering,Civil Engineering,BS,15032,140801,95,108,103,103,103,,,,,,,,,,,,,,,,,,,,,,,,,,,
+"Engineering, Science & Technology",Engineering,Manufacturing Engineering Technology,BS,02365,150613,72,65,62,52,54,,,,,,,,,,,,,,,,,,,,,,,,,,,
+"Engineering, Science & Technology",Engineering,Mechanical Engineering,BS,14202,141901,274,272,267,252,275,,,,,,,,,,,,,,,,,,,,,,,,,,,
+"Engineering, Science & Technology",Engineering,Mechanical Engineering,MS,19967,141901,,4,12,9,7,,,,,,,,,,,,,,,,,,,,,,,,,,,
+"Engineering, Science & Technology",Engineering,Mechanical Engineering Technology,BS,02813,150805,209,164,160,180,204,,,,,,,,,,,,,,,,,,,,,,,,,,,
+"Engineering, Science & Technology",Manufacturing & Construction Management,Construction Management,BS,10186,522001,229,222,215,203,217,,,,,,,,,,,,,,,,,,,,,,,,,,,
+"Engineering, Science & Technology",Manufacturing & Construction Management,Construction Management,MS,14421,522001,23,26,32,20,17,,,,,,,,,,,,,,,,,,,,,,,,,,,
+"Engineering, Science & Technology",Manufacturing & Construction Management,Construction Management,OCP,14628,522001,3,1,2,3,3,,,,,,,,,,,,,,,,,,,,,,,,,,,
+"Engineering, Science & Technology",Manufacturing & Construction Management,Environmental Health/Safety,OCP,14629,512202,,1,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+"Engineering, Science & Technology",Manufacturing & Construction Management,Lean Manufact. and Six Sigma,OCP,14630,150702,1,,,1,2,,,,,,,,,,,,,,,,,,,,,,,,,,,
+"Engineering, Science & Technology",Manufacturing & Construction Management,Manufacturing Management,BS,18000,520205,45,42,58,48,39,,,,,,,,,,,,,,,,,,,,,,,,,,,
+"Engineering, Science & Technology",Manufacturing & Construction Management,Robotics/Mechatronics Engineering Technology,BS,16962,150405,58,53,49,45,35,,,,,,,,,,,,,,,,,,,,,,,,,,,
+"Engineering, Science & Technology",Manufacturing & Construction Management,Supply Chain and Logistics,OCP,14634,520203,2,2,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+"Engineering, Science & Technology",Manufacturing & Construction Management,Supply Chain Logistics Management,MS,19544,521301,14,16,14,8,9,,,,,,,,,,,,,,,,,,,,,,,,,,,
+"Engineering, Science & Technology",Manufacturing & Construction Management,Supply Chain Logistics Management,MS,19545,521301,9,2,5,10,8,,,,,,,,,,,,,,,,,,,,,,,,,,,
+"Engineering, Science & Technology",Manufacturing & Construction Management,Technology Management,BS,00071,150612,18,30,24,25,30,,,,,,,,,,,,,,,,,,,,,,,,,,,
+"Engineering, Science & Technology",Manufacturing & Construction Management,Technology Management,MS,00040,151501,28,24,29,23,33,,,,,,,,,,,,,,,,,,,,,,,,,,,
+"Engineering, Science & Technology",Mathematical Sciences,Data Science,MS,09328,303001,40,45,39,63,79,,,,,,,,,,,,,,,,,,,,,,,,,,,
+"Engineering, Science & Technology",Mathematical Sciences,Data Science,OCP,09289,303001,5,2,2,3,2,,,,,,,,,,,,,,,,,,,,,,,,,,,
+"Engineering, Science & Technology",Mathematical Sciences,Mathematics,BA,00084,270101,82,55,55,57,51,,,,,,,,,,,,,,,,,,,,,,,,,,,
+"Engineering, Science & Technology",Mathematical Sciences,Mathematics,BS-Teach,00084,270101,27,18,23,28,23,,,,,,,,,,,,,,,,,,,,,,,,,,,
+"Engineering, Science & Technology",Mathematical Sciences,Mathematics,GRADCERT,10606,270101,9,14,10,8,6,,,,,,,,,,,,,,,,,,,,,,,,,,,
+"Engineering, Science & Technology",Mathematical Sciences,Mathematics,MA,00085,270101,21,20,15,20,13,,,,,,,,,,,,,,,,,,,,,,,,,,,
+"Engineering, Science & Technology",Mathematical Sciences,Mathematics,MS,00085,270101,19,25,21,18,15,,,,,,,,,,,,,,,,,,,,,,,,,,,
+"Engineering, Science & Technology",Physics & Engineering Physics,Physics,BS,00094,400801,41,21,28,29,24,,,,,,,,,,,,,,,,,,,,,,,,,,,
+"Engineering, Science & Technology",Physics & Engineering Physics,Physics,BS-Teach,00094,400801,4,2,2,4,3,,,,,,,,,,,,,,,,,,,,,,,,,,,
+"Engineering, Science & Technology",Physics & Engineering Physics,Science Education,GRADCERT,10176,131316,,,1,1,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+"Engineering, Science & Technology",Pre-Health Studies (Joint Program),Pre-Health Studies,OCP,10169,511199,15,21,15,14,11,,,,,,,,,,,,,,,,,,,,,,,,,,,
+"Engineering, Science & Technology",STEM (Joint Program),"Science, Technology, Engineering and Math Education",MS,17396,131309,19,20,17,11,10,,,,,,,,,,,,,,,,,,,,,,,,,,,
+"Engineering, Science & Technology",Technology & Engineering Education,Technology and Engineering Ed K-12,BS-Teach,00058,131309,33,21,22,16,17,,,,,,,,,,,,,,,,,,,,,,,,,,,
+"Engineering, Science & Technology",Technology & Engineering Education,Technology and Engineering Ed K-12,GRADCERT,10185,131309,5,4,2,2,5,,,,,,,,,,,,,,,,,,,,,,,,,,,
+"Engineering, Science & Technology",~No Dept/Shared,General Studies,BGS,20405,240102,,,2,13,12,,,,,,,,,,,,,,,,,,,,,,,,,,,
+"Engineering, Science & Technology",~No Dept/Shared,Special Studies,BS,00087,309999,,1,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+"Engineering, Science & Technology",~No Dept/Shared,Undecided (Engineering & Technology),BS,88888,,53,34,32,38,35,,,,,,,,,,,,,,,,,,,,,,,,,,,
+"Engineering, Science & Technology",Total,Total,Total,Total,Total,2895,2665,2592,2699,2763,,,,,,,,,,,,,,,,,,,,,,,,,,,
+NoSchool or Inter-School,~No Dept/Shared,Exchange Student-GR,,99999,,,,1,1,1,,,,,,,,,,,,,,,,,,,,,,,,,,,
+NoSchool or Inter-School,~No Dept/Shared,Exchange Student-UG,,99999,,1,6,4,7,10,,,,,,,,,,,,,,,,,,,,,,,,,,,
+NoSchool or Inter-School,~No Dept/Shared,General Studies,BGS,20405,240102,,,8,2,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+NoSchool or Inter-School,~No Dept/Shared,Non-Matriculated Student-GR,,99999,,123,82,103,101,104,,,,,,,,,,,,,,,,,,,,,,,,,,,
+NoSchool or Inter-School,~No Dept/Shared,Non-Matriculated Student-UG,,99999,,190,126,161,240,338,,,,,,,,,,,,,,,,,,,,,,,,,,,
+NoSchool or Inter-School,~No Dept/Shared,Undecided,00,88888,,330,244,243,243,225,,,,,,,,,,,,,,,,,,,,,,,,,,,
+NoSchool or Inter-School,Total,Total,Total,Total,Total,644,458,520,594,678,,,,,,,,,,,,,,,,,,,,,,,,,,,
+University Total,Total,Total,Total,Total,Total,10652,9653,9468,9712,9997,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
