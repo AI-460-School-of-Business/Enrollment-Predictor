@@ -16,6 +16,7 @@ from datetime import datetime
 import argparse
 import pickle
 import joblib
+import textwrap
 
 # ML Libraries
 from sklearn.model_selection import train_test_split, cross_val_score, GridSearchCV
@@ -52,11 +53,63 @@ DB_CONFIG = {
     "database": os.getenv("POSTGRES_DB", "postgres"),
 }
 
+QUERY_TEMPLATE_PATH = Path(__file__).parent / "query_templates" / "default_data_query.sql"
+
+
+def prompt_for_custom_query(template_path: Path) -> Optional[str]:
+    """Interactively prompt the user for a custom SQL query."""
+    print("\n=== Custom SQL Query Mode ===")
+    print("Provide a SELECT statement that returns the rows you want to train on.")
+    print("The query must include the columns required by the selected feature schema.\n")
+
+    template_content = ""
+    if template_path.exists():
+        template_content = template_path.read_text().strip()
+        print(f"Template file: {template_path}")
+        print("Template preview:\n")
+        preview = textwrap.indent(template_content, "    ")
+        print(preview)
+    else:
+        print("Template file not found. You can still enter a custom query manually.\n")
+    
+    print("Options:")
+    print("  • Press Enter to use the template above (if available).")
+    print("  • Type 'custom' to paste your own SQL query.")
+    print("  • Type 'skip' to fall back to automatic table discovery.\n")
+    
+    choice = input("Select option [Enter/custom/skip]: ").strip().lower()
+    if choice in {"", "enter"}:
+        if template_content:
+            print("Using template query.\n")
+            return template_content
+        print("No template available. Skipping custom query.\n")
+        return None
+    if choice == "skip":
+        print("Skipping custom query. Using automatic extraction.\n")
+        return None
+    if choice == "custom":
+        print("\nEnter your SQL query. Submit an empty line to finish:")
+        lines: List[str] = []
+        while True:
+            line = input()
+            if line == "":
+                break
+            lines.append(line)
+        query = "\n".join(lines).strip()
+        if not query:
+            print("No query entered. Using automatic extraction.\n")
+            return None
+        print("Custom query captured.\n")
+        return query
+    
+    print("Unrecognized option. Using automatic extraction.\n")
+    return None
+
 
 class EnrollmentPredictor:
     """Base class for enrollment prediction models."""
     
-    def __init__(self, model_type: str, feature_schema: str = "min"):
+    def __init__(self, model_type: str, feature_schema: str = "min", custom_query: Optional[str] = None):
         self.model_type = model_type
         self.feature_schema = feature_schema
         self.model = None
@@ -64,6 +117,7 @@ class EnrollmentPredictor:
         self.label_encoders = {}
         self.feature_columns = []
         self.target_column = "act_enrollment"
+        self.custom_query = custom_query
         
         # Load feature schema
         self.schema = self._load_feature_schema()
@@ -105,6 +159,13 @@ class EnrollmentPredictor:
         
         conn = self.get_db_connection()
         try:
+            if self.custom_query:
+                print("Custom SQL query provided. Skipping automatic table discovery.")
+                print("Executing custom query...\n")
+                custom_data = pd.read_sql(self.custom_query, conn)
+                print(f"Custom query returned {custom_data.shape[0]} rows and {custom_data.shape[1]} columns")
+                return custom_data
+            
             table_metadata = self._analyze_table_structures(conn)
             
             primary_table = self._identify_primary_table(table_metadata)
@@ -726,8 +787,8 @@ class EnrollmentPredictor:
 class LinearRegressionPredictor(EnrollmentPredictor):
     """Linear Regression implementation for enrollment prediction."""
     
-    def __init__(self, feature_schema: str = "min"):
-        super().__init__("linear", feature_schema)
+    def __init__(self, feature_schema: str = "min", custom_query: Optional[str] = None):
+        super().__init__("linear", feature_schema, custom_query=custom_query)
     
     def train(self, X: pd.DataFrame, y: pd.Series) -> Dict[str, Any]:
         """Train linear regression model with hyperparameter tuning."""
@@ -789,8 +850,8 @@ class LinearRegressionPredictor(EnrollmentPredictor):
 class TreePredictor(EnrollmentPredictor):
     """Tree-based model (Random Forest) for enrollment prediction."""
     
-    def __init__(self, feature_schema: str = "min"):
-        super().__init__("tree", feature_schema)
+    def __init__(self, feature_schema: str = "min", custom_query: Optional[str] = None):
+        super().__init__("tree", feature_schema, custom_query=custom_query)
     
     def train(self, X: pd.DataFrame, y: pd.Series) -> Dict[str, Any]:
         """Train Random Forest model with hyperparameter tuning."""
@@ -861,8 +922,8 @@ class TreePredictor(EnrollmentPredictor):
 class NeuralNetworkPredictor(EnrollmentPredictor):
     """Neural Network implementation for enrollment prediction."""
     
-    def __init__(self, feature_schema: str = "min"):
-        super().__init__("neural", feature_schema)
+    def __init__(self, feature_schema: str = "min", custom_query: Optional[str] = None):
+        super().__init__("neural", feature_schema, custom_query=custom_query)
         self.model_path = None
     
     def train(self, X: pd.DataFrame, y: pd.Series) -> Dict[str, Any]:
@@ -975,20 +1036,49 @@ def main():
                        help="Model type to train")
     parser.add_argument("--features", choices=["min", "rich", "auto"], default="min",
                        help="Feature schema to use (min=specific features, rich=all features, auto=auto-generated)")
+    parser.add_argument("--data-query-file", type=str,
+                       help="Path to a SQL file whose contents will be executed to retrieve training data")
+    parser.add_argument("--data-query", type=str,
+                       help="Inline SQL query to retrieve training data")
+    parser.add_argument("--interactive-query", action="store_true",
+                       help="Interactively preview and edit a SQL query template before training")
     
     args = parser.parse_args()
     
     print(f"=== Training {args.model} model with {args.features} features ===")
     if args.features == "min":
         print("Using specific features: term, subj, crse, sec, credits to predict act enrollment")
+
+    custom_query: Optional[str] = None
+    if args.data_query_file:
+        query_path = Path(args.data_query_file)
+        if not query_path.exists():
+            print(f"Error: query file not found at {query_path}")
+            sys.exit(1)
+        custom_query = query_path.read_text().strip() or None
+        print(f"Loaded custom query from {query_path}")
+    elif args.data_query:
+        custom_query = args.data_query.strip() or None
+        print("Using custom query provided via --data-query")
+    elif args.interactive_query:
+        custom_query = prompt_for_custom_query(QUERY_TEMPLATE_PATH)
+    
+    if custom_query:
+        preview_lines = custom_query.strip().splitlines()
+        preview_display = preview_lines[:5]
+        if len(preview_lines) > 5:
+            preview_display.append("...")
+        print("Custom query preview:")
+        print(textwrap.indent("\n".join(preview_display), "    "))
+        print()
     
     # Create predictor based on model type
     if args.model == "linear":
-        predictor = LinearRegressionPredictor(args.features)
+        predictor = LinearRegressionPredictor(args.features, custom_query=custom_query)
     elif args.model == "tree":
-        predictor = TreePredictor(args.features)
+        predictor = TreePredictor(args.features, custom_query=custom_query)
     elif args.model == "neural":
-        predictor = NeuralNetworkPredictor(args.features)
+        predictor = NeuralNetworkPredictor(args.features, custom_query=custom_query)
     
     try:
         # Extract and prepare data
