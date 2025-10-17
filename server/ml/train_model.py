@@ -25,6 +25,7 @@ from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
+import warnings
 
 # Neural Network
 import tensorflow as tf
@@ -689,11 +690,20 @@ class EnrollmentPredictor:
         """Evaluate model performance."""
         y_pred = self.predict(X_test)
         
+        # Calculate MAPE (Mean Absolute Percentage Error)
+        # Filter out zero values to avoid division by zero
+        mask = y_test > 0
+        if mask.any():
+            mape = np.mean(np.abs((y_test[mask] - y_pred[mask]) / y_test[mask])) * 100
+        else:
+            mape = np.nan  # Set to NaN if all values are zero
+        
         return {
             'mse': mean_squared_error(y_test, y_pred),
             'mae': mean_absolute_error(y_test, y_pred),
             'r2': r2_score(y_test, y_pred),
-            'rmse': np.sqrt(mean_squared_error(y_test, y_pred))
+            'rmse': np.sqrt(mean_squared_error(y_test, y_pred)),
+            'mape': mape
         }
     
     def save_model(self, filepath: str):
@@ -746,16 +756,27 @@ class LinearRegressionPredictor(EnrollmentPredictor):
         train_score = self.model.score(X_train, y_train)
         val_score = self.model.score(X_val, y_val)
         
+        # Calculate MAPE
+        y_val_pred = self.model.predict(X_val)
+        # Filter out zero values to avoid division by zero
+        mask = y_val > 0
+        if mask.any():
+            val_mape = np.mean(np.abs((y_val[mask] - y_val_pred[mask]) / y_val[mask])) * 100
+        else:
+            val_mape = np.nan  # Set to NaN if all values are zero
+        
         results = {
             'best_params': grid_search.best_params_,
             'train_r2': train_score,
             'val_r2': val_score,
+            'val_mape': val_mape,
             'cv_scores': grid_search.cv_results_['mean_test_score']
         }
         
         print(f"Best parameters: {results['best_params']}")
         print(f"Train R²: {train_score:.4f}")
         print(f"Validation R²: {val_score:.4f}")
+        print(f"Validation MAPE: {val_mape:.2f}%")
         
         return results
     
@@ -801,16 +822,29 @@ class TreePredictor(EnrollmentPredictor):
         train_score = self.model.score(X_train, y_train)
         val_score = self.model.score(X_val, y_val)
         
+        # Predict on validation set
+        y_val_pred = self.model.predict(X_val)
+        
+        # Calculate MAPE
+        # Filter out zero values to avoid division by zero
+        mask = y_val > 0
+        if mask.any():
+            val_mape = np.mean(np.abs((y_val[mask] - y_val_pred[mask]) / y_val[mask])) * 100
+        else:
+            val_mape = np.nan  # Set to NaN if all values are zero
+        
         results = {
             'best_params': grid_search.best_params_,
             'train_r2': train_score,
             'val_r2': val_score,
+            'val_mape': val_mape,
             'feature_importance': dict(zip(self.feature_columns, self.model.feature_importances_))
         }
         
         print(f"Best parameters: {results['best_params']}")
         print(f"Train R²: {train_score:.4f}")
         print(f"Validation R²: {val_score:.4f}")
+        print(f"Validation MAPE: {val_mape:.2f}%")
         print("Top 5 important features:")
         sorted_features = sorted(results['feature_importance'].items(), key=lambda x: x[1], reverse=True)
         for feat, importance in sorted_features[:5]:
@@ -877,16 +911,27 @@ class NeuralNetworkPredictor(EnrollmentPredictor):
         train_loss = self.model.evaluate(X_train, y_train, verbose=0)
         val_loss = self.model.evaluate(X_val, y_val, verbose=0)
         
+        # Calculate MAPE
+        y_val_pred = self.model.predict(X_val)
+        # Filter out zero values to avoid division by zero
+        mask = y_val > 0
+        if mask.any():
+            val_mape = np.mean(np.abs((y_val[mask] - y_val_pred.flatten()[mask]) / y_val[mask])) * 100
+        else:
+            val_mape = np.nan  # Set to NaN if all values are zero
+        
         results = {
             'train_loss': train_loss[0],
             'train_mae': train_loss[1],
             'val_loss': val_loss[0],
             'val_mae': val_loss[1],
+            'val_mape': val_mape,
             'epochs_trained': len(history.history['loss'])
         }
         
         print(f"Train Loss: {train_loss[0]:.4f}, MAE: {train_loss[1]:.4f}")
         print(f"Val Loss: {val_loss[0]:.4f}, MAE: {val_loss[1]:.4f}")
+        print(f"Validation MAPE: {val_mape:.2f}%")
         print(f"Epochs trained: {results['epochs_trained']}")
         
         return results
