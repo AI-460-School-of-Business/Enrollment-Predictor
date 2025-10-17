@@ -1,0 +1,274 @@
+{
+  "CRN": "string",
+  "Semester": "string",
+  "EnrollmentCount": "integer",
+
+  "CourseAttributes": {
+    "CourseLevel": "string",
+    "Program": "string",
+    "SchoolOrCollege": "string",
+    "Department": "string",
+    "CreditHours": "integer",
+    "TimeToDegreeFactor": "float"
+  },
+
+  "StudentDemographics": {
+    "GenderDistribution": {
+      "Male": "float",
+      "Female": "float"
+    },
+    "RaceEthnicityDistribution": {
+      "White": "float",
+      "Black": "float",
+      "Hispanic": "float",
+      "Asian": "float",
+      "TwoOrMore": "float",
+      "International": "float",
+      "Unknown": "float"
+    },
+    "LevelDistribution": {
+      "Undergraduate": "float",
+      "Graduate": "float",
+      "Doctoral": "float"
+    },
+    "ResidencyStatusDistribution": {
+      "CTResident": "float",
+      "NonResident": "float",
+      "NEBHE": "float",
+      "International": "float"
+    },
+    "AthleteWithAidPercentage": "float",
+    "FirstGenPercentage": "float",
+    "TransferPercentage": "float",
+    "PartTimePercentage": "float",
+    "MilitaryConnectedPercentage": "float",
+    "MilitaryConnectedGenderSplit": {
+      "Male": "float",
+      "Female": "float"
+    },
+    "MilitaryConnectedLevel": {
+      "Undergraduate": "float",
+      "Graduate": "float"
+    },
+    "MilitaryConnectedSchoolDistribution": "object",
+    "MilitaryConnectedTopPrograms": ["string"]
+  },
+
+  "UniversityContext": {
+    "TotalEnrollment": "integer",
+    "EnrollmentByGender": "object",
+    "EnrollmentByRace": "object",
+    "StudentFacultyRatio": {
+      "UniversityWide": "float",
+      "BySchool": "object",
+      "ByDepartment": "object"
+    },
+    "FacultyLoad": {
+      "FTFacultyHeadcount": "integer",
+      "PTFacultyHeadcount": "integer",
+      "FTFacultyWith12PlusLoad": "integer",
+      "FTFacultyOnSabbatical": "integer",
+      "StudentCreditHours": "integer",
+      "StudentContactHours": "integer",
+      "FTEEnrollment": "integer",
+      "CreditHoursPerFaculty": "float",
+      "ContactHoursPerFaculty": "float",
+      "FTEPerFaculty": "float",
+      "InstructionalLoadCredits": "integer",
+      "NonInstructionalLoadCredits": "integer",
+      "ResearchLoadCredits": "integer",
+      "ChairLoadCredits": "integer",
+      "OtherNonInstructionalLoadCredits": "integer",
+      "ForwardOverUnderLoadCredits": "integer",
+      "LoadRatioPerFaculty": {
+        "Instructional": "float",
+        "Total": "float",
+        "ForwardOverUnder": "float"
+      },
+      "PercentTaughtByFullTime": "float",
+      "PercentTaughtByPartTime": "float"
+    },
+    "EmployeeHeadcount": {
+      "FullTimeStaff": "integer",
+      "PartTimeStaff": "integer",
+      "ByRaceEthnicity": "object",
+      "ByGender": "object"
+    },
+    "InstructionalFacultySalaries": {
+      "ByRankGender": "object",
+      "ByStatus": "object",
+      "ByDepartment": "object",
+      "ByDegree": "object"
+    }
+  },
+
+  "SemesterFactors": {
+    "Term": "string",
+    "Year": "integer",
+    "LaggedProgramEnrollment": "integer",
+    "LaggedSchoolEnrollment": "integer",
+    "LaggedUniversityEnrollment": "integer",
+    "SchoolHeadcount": "integer",
+    "FacultyLoadBalance": "float",
+    "HistoricalEnrollmentTrend": "float",
+    "MacroEvents": "string"
+  },
+
+  "FinancialContext": {
+    "TuitionAndFees": {
+      "FullTimeUndergrad_CTResident": "float",
+      "FullTimeUndergrad_NonResident": "float",
+      "FullTimeUndergrad_NEBHE": "float",
+      "FullTimeUndergrad_International": "float",
+      "PartTimeUndergrad_CTResident": "float",
+      "PartTimeUndergrad_NonResident": "float",
+      "FullTimeGrad_CTResident": "float",
+      "FullTimeGrad_NEBHE": "float",
+      "FullTimeGrad_International": "float",
+      "PartTimeGrad_CTResident": "float",
+      "PartTimeGrad_NonResident": "float",
+      "PartTimeDoctoral_CTResident": "float",
+      "PartTimeDoctoral_NonResident": "float"
+    },
+    "RoomAndBoard": {
+      "Undergraduate": "float",
+      "Graduate": "float"
+    }
+  },
+
+  "AdmissionsContext": {
+    "Applications": "integer",
+    "Acceptances": "integer",
+    "Confirmations": "integer",
+    "NewEnrollments": {
+      "FullTime": "integer",
+      "PartTime": "integer",
+      "Total": "integer"
+    },
+    "AcceptanceRate": "float",
+    "YieldRate": "float",
+    "ConfirmRate": "float",
+    "ConfirmToEnrollRate": "float"
+  },
+
+  "AcademicPrepContext": {
+    "MeanSAT": {
+      "EvidenceBasedRW": "float",
+      "Math": "float",
+      "Combined": "float"
+    },
+    "HighSchoolRankPercentile": "float",
+    "HighSchoolGPA": "float",
+    "SATOptionalFlag": "boolean"
+  },
+
+  "OutcomesContext": {
+    "RetentionRates": {
+      "Ret_2yr": "float",
+      "Ret_3yr": "float",
+      "Ret_4yr": "float"
+    },
+    "GraduationRates": {
+      "Grad_4yr": "float",
+      "Grad_5yr": "float",
+      "Grad_6yr": "float"
+    },
+    "TransferGradRates": "object",
+    "PartTimeGradRates": "object",
+    "AthleteGradRate": "float",
+    "MilitaryConnectedGradRate": "float"
+  },
+
+  "ProgramContext": {
+    "School": "string",
+    "Department": "string",
+    "ProgramName": "string",
+    "Credential": "string",
+    "OHECode": "string",
+    "CIPCode": "string",
+    "ClassLevelDistribution": "object",
+    "EnrollmentStatus": {
+      "FullTime": "integer",
+      "PartTime": "integer",
+      "Total": "integer"
+    }
+  },
+
+  "ProgramDemographics": {
+    "ByGender": "object",
+    "ByRaceEthnicity": "object"
+  },
+
+  "AgeContext": {
+    "AgeDistribution": "object",
+    "TraditionalPercentage": "float",
+    "NonTraditionalPercentage": "float",
+    "AverageAge": "float"
+  },
+
+  "MatriculationContext": {
+    "Matriculated_FullTime": "integer",
+    "Matriculated_PartTime": "integer",
+    "NonMatriculated_Total": "integer"
+  },
+
+  "GeographicContext": {
+    "ByTown": "object",
+    "TopFeederTowns": ["string"],
+    "RegionalShift5Yr": "float",
+    "OutOfStateByState": "object",
+    "InternationalStudentsCount": "integer",
+    "NewEnglandRegionalBreakdown": "object",
+    "OnCampusHousingByClass": "object",
+    "CommuterByClass": "object",
+    "OnCampusVsCommuterPercentage": "float"
+  },
+
+  "FeederSchoolContext": {
+    "TopHighSchools": ["string"],
+    "HighSchoolEnrollmentCounts": "object"
+  },
+
+  "CrossDemographics": {
+    "Male": "object",
+    "Female": "object"
+  },
+
+  "MinorContext": {
+    "MinorHeadcounts": "object",
+    "TopMinors": ["string"],
+    "STEM_MinorPercentage": "float",
+    "Business_MinorPercentage": "float",
+    "Humanities_MinorPercentage": "float"
+  },
+
+  "SchoolContext": {
+    "SchoolEnrollment": "object",
+    "DepartmentEnrollment": "object",
+    "ProgramEnrollment": "object",
+    "FT_PT_Distribution": "object"
+  },
+
+  "SecondMajorContext": {
+    "SecondMajorCounts": "object",
+    "MostCommonSecondMajors": ["string"]
+  },
+
+  "HistoricalEnrollmentContext": {
+    "HistoricalHeadcounts": "object",
+    "HistoricalFTPTBreakdown": "object",
+    "5yrTrend": "float",
+    "10yrTrend": "float"
+  },
+
+  "SchoolDemographics": {
+    "BySchool_GenderRace": "object"
+  },
+
+  "SpringEnrollmentContext": {
+    "SpringProgramEnrollment": "object",
+    "SpringPreMajorEnrollment": "object",
+    "SpringCredentialBreakdown": "object",
+    "SpringConcentrationEnrollment": "object"
+  }
+}
