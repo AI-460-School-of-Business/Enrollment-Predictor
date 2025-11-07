@@ -53,36 +53,45 @@ DB_CONFIG = {
     "database": os.getenv("POSTGRES_DB", "postgres"),
 }
 
-QUERY_TEMPLATE_PATH = Path(__file__).parent / "query_templates" / "default_data_query.sql"
+DEFAULT_CUSTOM_QUERY = textwrap.dedent(
+    """
+    -- Enrollment Predictor Custom Data Query Template
+    -- Update the WHERE clause or add joins to shape the dataset.
+    -- Ensure the query returns all columns required by your chosen feature schema.
+    -- Example below limits data to terms with a year of 2023 or later.
+
+    SELECT *
+    FROM section_detail_report_sbussection_detail_report_sbus
+    WHERE (term / 100) >= 2023;
+    """
+).strip()
 
 
-def prompt_for_custom_query(template_path: Path) -> Optional[str]:
+def prompt_for_custom_query(default_query: Optional[str]) -> Optional[str]:
     """Interactively prompt the user for a custom SQL query."""
     print("\n=== Custom SQL Query Mode ===")
     print("Provide a SELECT statement that returns the rows you want to train on.")
     print("The query must include the columns required by the selected feature schema.\n")
 
-    template_content = ""
-    if template_path.exists():
-        template_content = template_path.read_text().strip()
-        print(f"Template file: {template_path}")
-        print("Template preview:\n")
+    template_content = default_query.strip() if default_query else ""
+    if template_content:
+        print("Default query preview:\n")
         preview = textwrap.indent(template_content, "    ")
         print(preview)
     else:
-        print("Template file not found. You can still enter a custom query manually.\n")
+        print("No default query available. You can still enter a custom query manually.\n")
     
     print("Options:")
-    print("  • Press Enter to use the template above (if available).")
+    print("  • Press Enter to use the query above (if available).")
     print("  • Type 'custom' to paste your own SQL query.")
     print("  • Type 'skip' to fall back to automatic table discovery.\n")
     
     choice = input("Select option [Enter/custom/skip]: ").strip().lower()
     if choice in {"", "enter"}:
         if template_content:
-            print("Using template query.\n")
+            print("Using default query.\n")
             return template_content
-        print("No template available. Skipping custom query.\n")
+        print("No default query available. Skipping custom query.\n")
         return None
     if choice == "skip":
         print("Skipping custom query. Using automatic extraction.\n")
@@ -1061,7 +1070,7 @@ def main():
         custom_query = args.data_query.strip() or None
         print("Using custom query provided via --data-query")
     elif args.interactive_query:
-        custom_query = prompt_for_custom_query(QUERY_TEMPLATE_PATH)
+        custom_query = prompt_for_custom_query(DEFAULT_CUSTOM_QUERY)
     
     if custom_query:
         preview_lines = custom_query.strip().splitlines()
