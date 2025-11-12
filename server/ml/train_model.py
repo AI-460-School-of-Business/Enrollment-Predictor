@@ -1,7 +1,8 @@
 """
 Enrollment Prediction Model Training
 
-Trains models to predict enrollment counts using CRN, Semester, Year data.
+Trains models to predict enrollment counts using Subject+Course, Semester, Year data.
+Course identity is determined by the combination of subj (subject) and crse (course number).
 Usage: python server/ml/train_model.py --model [linear|tree|neural] --features [min|rich]
 """
 
@@ -150,9 +151,9 @@ class EnrollmentPredictor:
         # If no schema file found, create a basic one
         print(f"No feature schema found, using basic schema for {self.feature_schema}")
         if self.feature_schema == "min":
-            return {"CRN": "string", "Semester": "string", "EnrollmentCount": "integer"}
+            return {"Subject": "string", "Course": "string", "Semester": "string", "EnrollmentCount": "integer"}
         else:
-            return {"CRN": "string", "Semester": "string", "EnrollmentCount": "integer", "additional_features": "mixed"}
+            return {"Subject": "string", "Course": "string", "Semester": "string", "EnrollmentCount": "integer", "additional_features": "mixed"}
     
     def get_db_connection(self):
         """Create database connection."""
@@ -179,7 +180,7 @@ class EnrollmentPredictor:
             
             primary_table = self._identify_primary_table(table_metadata)
             if not primary_table:
-                raise ValueError("Could not find primary table with CRN, Semester, Year, and Enrollment")
+                raise ValueError("Could not find primary table with Subject, Course, Semester, Year, and Enrollment")
             
             print(f"Primary table: {primary_table['name']}")
             
@@ -230,7 +231,8 @@ class EnrollmentPredictor:
             column_names = [col['column_name'] for col in column_info]
             column_names_lower = [col.lower() for col in column_names]
             
-            has_crn = any('crn' in col for col in column_names_lower)
+            has_subj = any('subj' in col for col in column_names_lower)
+            has_crse = any('crse' in col or 'course' in col for col in column_names_lower)
             has_term = any(col == 'term' for col in column_names_lower)
             has_semester = any('semester' in col for col in column_names_lower) or has_term
             has_year = any('year' in col for col in column_names_lower) or has_term
@@ -245,7 +247,8 @@ class EnrollmentPredictor:
                 'columns': column_info,
                 'column_names': column_names,
                 'column_names_lower': column_names_lower,
-                'has_crn': has_crn,
+                'has_subj': has_subj,
+                'has_crse': has_crse,
                 'has_term': has_term,
                 'has_semester': has_semester,
                 'has_year': has_year,
@@ -255,20 +258,21 @@ class EnrollmentPredictor:
             
             table_metadata.append(metadata)
             
-            print(f"Table {table_name}: {row_count} rows, CRN={has_crn}, Term={has_term}, Semester={has_semester}, Year={has_year}, Enrollment={has_enrollment}")
+            print(f"Table {table_name}: {row_count} rows, Subj={has_subj}, Crse={has_crse}, Term={has_term}, Semester={has_semester}, Year={has_year}, Enrollment={has_enrollment}")
             print(f"  Columns: {column_names[:10]}...")
         
         return table_metadata
     
     def _identify_primary_table(self, table_metadata: List[Dict]) -> Optional[Dict]:
-        """Identify the primary table that has CRN, Semester, Year, and Enrollment."""
+        """Identify the primary table that has Subject, Course, Semester, Year, and Enrollment."""
         candidates = []
         
         for table in table_metadata:
-            # Must have CRN, Semester, and Enrollment at minimum
-            if table['has_crn'] and table['has_semester'] and table['has_enrollment']:
+            # Must have Subject, Course, Semester, and Enrollment at minimum
+            if table['has_subj'] and table['has_crse'] and table['has_semester'] and table['has_enrollment']:
                 score = 0
-                score += 10 if table['has_crn'] else 0
+                score += 10 if table['has_subj'] else 0
+                score += 10 if table['has_crse'] else 0
                 score += 10 if table['has_semester'] else 0
                 score += 10 if table['has_year'] else 0
                 score += 10 if table['has_enrollment'] else 0
@@ -482,9 +486,10 @@ class EnrollmentPredictor:
         return base_data
     
     def _identify_key_columns(self, columns: List[str]) -> Dict[str, Optional[str]]:
-        """Identify key columns (CRN, Term/Semester/Year, Enrollment) in a list of column names."""
+        """Identify key columns (Subject, Course, Term/Semester/Year, Enrollment) in a list of column names."""
         key_cols = {
-            'crn': None,
+            'subj': None,
+            'crse': None,
             'term': None,
             'semester': None, 
             'year': None,
@@ -494,8 +499,10 @@ class EnrollmentPredictor:
         for col in columns:
             col_lower = col.lower()
             
-            if 'crn' in col_lower and key_cols['crn'] is None:
-                key_cols['crn'] = col
+            if 'subj' in col_lower and key_cols['subj'] is None:
+                key_cols['subj'] = col
+            elif ('crse' in col_lower or (col_lower == 'course' and 'crse' not in [c.lower() for c in columns])) and key_cols['crse'] is None:
+                key_cols['crse'] = col
             elif (col_lower == 'term') and key_cols['term'] is None:
                 key_cols['term'] = col
             elif ('semester' in col_lower) and key_cols['semester'] is None:
@@ -519,15 +526,16 @@ class EnrollmentPredictor:
         key_cols = self._identify_key_columns(data.columns)
         
         print(f"\nIdentified key columns:")
-        print(f"  CRN: {key_cols['crn']}")
+        print(f"  Subject: {key_cols['subj']}")
+        print(f"  Course: {key_cols['crse']}")
         print(f"  Term: {key_cols['term']}")
         print(f"  Semester: {key_cols['semester']}")
         print(f"  Year: {key_cols['year']}")
         print(f"  Enrollment (act): {key_cols['enrollment']}")
         
-        # Require CRN + (Term or Semester) + Enrollment
-        if not (key_cols['crn'] and (key_cols['term'] or key_cols['semester']) and key_cols['enrollment']):
-            raise ValueError("Could not identify required columns (CRN, Term/Semester, Enrollment/act)")
+        # Require Subject + Course + (Term or Semester) + Enrollment
+        if not (key_cols['subj'] and key_cols['crse'] and (key_cols['term'] or key_cols['semester']) and key_cols['enrollment']):
+            raise ValueError("Could not identify required columns (Subject, Course, Term/Semester, Enrollment/act)")
         
         # Create working copy
         features_data = data.copy()
@@ -599,7 +607,7 @@ class EnrollmentPredictor:
             excluded_cols = {self.target_column, key_cols['enrollment']}
             
             # Include our specific desired features first (if available)
-            desired_features = ['term', 'subj', 'crse', 'sec', 'credits', 'title']
+            desired_features = ['term', 'subj', 'crse', 'sec', 'credits']
             columns_lower = {col.lower(): col for col in data.columns}
             
             print("\nIncluding specifically desired features:")
@@ -791,6 +799,123 @@ class EnrollmentPredictor:
             pickle.dump(model_data, f)
         
         print(f"Model saved to {filepath}")
+    
+    def _analyze_per_course_accuracy(self, X_val: pd.DataFrame, y_val: pd.Series, y_pred: np.ndarray) -> Optional[pd.DataFrame]:
+        """Analyze prediction accuracy per course (subj+crse combination).
+        
+        Args:
+            X_val: Original unprocessed validation features DataFrame
+            y_val: Validation target values
+            y_pred: Predicted values
+        """
+        # Check if we have subj and crse in our features
+        has_subj = any('subj' in col.lower() for col in X_val.columns)
+        has_crse = any('crse' in col.lower() for col in X_val.columns)
+        
+        if not (has_subj and has_crse):
+            print("\nCannot analyze per-course accuracy: subj or crse not in features")
+            return None
+        
+        # Find the actual column names
+        subj_col = next((col for col in X_val.columns if 'subj' in col.lower()), None)
+        crse_col = next((col for col in X_val.columns if 'crse' in col.lower()), None)
+        
+        if not subj_col or not crse_col:
+            return None
+        
+        # Reset index to ensure alignment
+        X_val_reset = X_val.reset_index(drop=True)
+        y_val_reset = y_val.reset_index(drop=True)
+        
+        # Create a dataframe with predictions and actuals
+        analysis_df = pd.DataFrame({
+            'subj': X_val_reset[subj_col],
+            'crse': X_val_reset[crse_col],
+            'actual': y_val_reset.values,
+            'predicted': y_pred
+        })
+        
+        # Calculate per-course metrics
+        analysis_df['abs_error'] = np.abs(analysis_df['actual'] - analysis_df['predicted'])
+        analysis_df['pct_error'] = np.where(
+            analysis_df['actual'] > 0,
+            (analysis_df['abs_error'] / analysis_df['actual']) * 100,
+            np.nan
+        )
+        
+        # Group by course
+        course_stats = analysis_df.groupby(['subj', 'crse']).agg({
+            'actual': ['mean', 'count'],
+            'abs_error': 'mean',
+            'pct_error': 'mean'
+        }).round(2)
+        
+        course_stats.columns = ['avg_enrollment', 'predictions_count', 'mae', 'mape']
+        course_stats = course_stats.sort_values('mape')
+        
+        # Print report
+        print("\n" + "="*80)
+        print("PER-COURSE PREDICTION ACCURACY REPORT")
+        print("="*80)
+        print(f"Total courses in validation set: {len(course_stats)}")
+        print(f"\nTop 10 Most Predictable Courses (Lowest MAPE):")
+        print("-"*80)
+        print(f"{'Course':<12} {'Avg Enroll':<12} {'Predictions':<12} {'MAE':<12} {'MAPE':<12}")
+        print("-"*80)
+        
+        for (subj, crse), row in course_stats.head(10).iterrows():
+            course_name = f"{subj} {crse}"
+            print(f"{course_name:<12} {row['avg_enrollment']:<12.1f} {int(row['predictions_count']):<12} "
+                  f"{row['mae']:<12.2f} {row['mape']:<12.1f}%")
+        
+        print(f"\nBottom 10 Least Predictable Courses (Highest MAPE):")
+        print("-"*80)
+        print(f"{'Course':<12} {'Avg Enroll':<12} {'Predictions':<12} {'MAE':<12} {'MAPE':<12}")
+        print("-"*80)
+        
+        for (subj, crse), row in course_stats.tail(10).iterrows():
+            course_name = f"{subj} {crse}"
+            print(f"{course_name:<12} {row['avg_enrollment']:<12.1f} {int(row['predictions_count']):<12} "
+                  f"{row['mae']:<12.2f} {row['mape']:<12.1f}%")
+        
+        print("\n" + "="*80)
+        
+        # Summary statistics
+        print(f"\nPrediction Accuracy Summary:")
+        print(f"  Courses with MAPE < 20% (Good):        {(course_stats['mape'] < 20).sum()} courses")
+        print(f"  Courses with MAPE 20-40% (Moderate):   {((course_stats['mape'] >= 20) & (course_stats['mape'] < 40)).sum()} courses")
+        print(f"  Courses with MAPE > 40% (Poor):        {(course_stats['mape'] >= 40).sum()} courses")
+        print("="*80 + "\n")
+        
+        # Save complete ranked list to CSV
+        try:
+            # Use a path relative to the script location (works in Docker)
+            output_dir = Path(__file__).parent / "test_results"
+            output_dir.mkdir(parents=True, exist_ok=True)
+            
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            csv_filename = f"per_course_accuracy_{self.model_type}_{timestamp}.csv"
+            csv_path = output_dir / csv_filename
+            
+            # Prepare DataFrame for export with better column names
+            export_df = course_stats.reset_index()
+            export_df.columns = ['Subject', 'Course', 'Avg_Enrollment', 'Num_Predictions', 'MAE', 'MAPE']
+            export_df['Rank'] = range(1, len(export_df) + 1)
+            
+            # Reorder columns
+            export_df = export_df[['Rank', 'Subject', 'Course', 'Avg_Enrollment', 'Num_Predictions', 'MAE', 'MAPE']]
+            
+            # Save to CSV
+            export_df.to_csv(csv_path, index=False)
+            print(f"\n✓ Per-course accuracy report saved to: {csv_path}")
+            print(f"  Total courses ranked: {len(export_df)}\n")
+            
+        except Exception as e:
+            print(f"\n✗ ERROR: Could not save CSV file: {e}")
+            import traceback
+            traceback.print_exc()
+        
+        return course_stats
 
 
 class LinearRegressionPredictor(EnrollmentPredictor):
@@ -803,13 +928,14 @@ class LinearRegressionPredictor(EnrollmentPredictor):
         """Train linear regression model with hyperparameter tuning."""
         print("Training Linear Regression model...")
         
-        # Preprocess features
-        X_processed = self.preprocess_features(X, fit_transform=True)
-        
-        # Split data
-        X_train, X_val, y_train, y_val = train_test_split(
-            X_processed, y, test_size=0.2, random_state=42
+        # Split data BEFORE preprocessing to preserve original DataFrames
+        X_train_raw, X_val_raw, y_train, y_val = train_test_split(
+            X, y, test_size=0.2, random_state=42
         )
+        
+        # Preprocess features
+        X_train = self.preprocess_features(X_train_raw, fit_transform=True)
+        X_val = self.preprocess_features(X_val_raw, fit_transform=False)
         
         # Hyperparameter tuning
         param_grid = {
@@ -826,8 +952,10 @@ class LinearRegressionPredictor(EnrollmentPredictor):
         train_score = self.model.score(X_train, y_train)
         val_score = self.model.score(X_val, y_val)
         
-        # Calculate MAPE
+        # Predict on validation set
         y_val_pred = self.model.predict(X_val)
+        
+        # Calculate MAPE
         # Filter out zero values to avoid division by zero
         mask = y_val > 0
         if mask.any():
@@ -848,6 +976,9 @@ class LinearRegressionPredictor(EnrollmentPredictor):
         print(f"Validation R²: {val_score:.4f}")
         print(f"Validation MAPE: {val_mape:.2f}%")
         
+        # Report per-course accuracy if we have subj and crse features (use raw unprocessed data)
+        results['per_course_accuracy'] = self._analyze_per_course_accuracy(X_val_raw, y_val, y_val_pred)
+        
         return results
     
     def predict(self, X: pd.DataFrame) -> np.ndarray:
@@ -866,13 +997,14 @@ class TreePredictor(EnrollmentPredictor):
         """Train Random Forest model with hyperparameter tuning."""
         print("Training Random Forest model...")
         
-        # Preprocess features
-        X_processed = self.preprocess_features(X, fit_transform=True)
-        
-        # Split data
-        X_train, X_val, y_train, y_val = train_test_split(
-            X_processed, y, test_size=0.2, random_state=42
+        # Split data BEFORE preprocessing to preserve original DataFrames
+        X_train_raw, X_val_raw, y_train, y_val = train_test_split(
+            X, y, test_size=0.2, random_state=42
         )
+        
+        # Preprocess features
+        X_train = self.preprocess_features(X_train_raw, fit_transform=True)
+        X_val = self.preprocess_features(X_val_raw, fit_transform=False)
         
         # Hyperparameter tuning
         param_grid = {
@@ -920,6 +1052,9 @@ class TreePredictor(EnrollmentPredictor):
         for feat, importance in sorted_features[:5]:
             print(f"  {feat}: {importance:.4f}")
         
+        # Report per-course accuracy if we have subj and crse features (use raw unprocessed data)
+        results['per_course_accuracy'] = self._analyze_per_course_accuracy(X_val_raw, y_val, y_val_pred)
+        
         return results
     
     def predict(self, X: pd.DataFrame) -> np.ndarray:
@@ -939,17 +1074,18 @@ class NeuralNetworkPredictor(EnrollmentPredictor):
         """Train neural network model."""
         print("Training Neural Network model...")
         
-        # Preprocess features
-        X_processed = self.preprocess_features(X, fit_transform=True)
-        
-        # Split data
-        X_train, X_val, y_train, y_val = train_test_split(
-            X_processed, y, test_size=0.2, random_state=42
+        # Split data BEFORE preprocessing to preserve original DataFrames
+        X_train_raw, X_val_raw, y_train, y_val = train_test_split(
+            X, y, test_size=0.2, random_state=42
         )
+        
+        # Preprocess features
+        X_train = self.preprocess_features(X_train_raw, fit_transform=True)
+        X_val = self.preprocess_features(X_val_raw, fit_transform=False)
         
         # Build neural network
         self.model = keras.Sequential([
-            layers.Dense(128, activation='relu', input_shape=(X_processed.shape[1],)),
+            layers.Dense(128, activation='relu', input_shape=(X_train.shape[1],)),
             layers.Dropout(0.3),
             layers.Dense(64, activation='relu'),
             layers.Dropout(0.3),
@@ -981,8 +1117,10 @@ class NeuralNetworkPredictor(EnrollmentPredictor):
         train_loss = self.model.evaluate(X_train, y_train, verbose=0)
         val_loss = self.model.evaluate(X_val, y_val, verbose=0)
         
-        # Calculate MAPE
+        # Predict on validation set
         y_val_pred = self.model.predict(X_val)
+        
+        # Calculate MAPE
         # Filter out zero values to avoid division by zero
         mask = y_val > 0
         if mask.any():
@@ -1003,6 +1141,9 @@ class NeuralNetworkPredictor(EnrollmentPredictor):
         print(f"Val Loss: {val_loss[0]:.4f}, MAE: {val_loss[1]:.4f}")
         print(f"Validation MAPE: {val_mape:.2f}%")
         print(f"Epochs trained: {results['epochs_trained']}")
+        
+        # Report per-course accuracy if we have subj and crse features (use raw unprocessed data)
+        results['per_course_accuracy'] = self._analyze_per_course_accuracy(X_val_raw, y_val, y_val_pred.flatten())
         
         return results
     

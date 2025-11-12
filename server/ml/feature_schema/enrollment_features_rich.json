@@ -1,5 +1,6 @@
 {
-  "CRN": "string",
+  "Subject": "string",
+  "Course": "string",
   "Semester": "string",
   "EnrollmentCount": "integer",
 
