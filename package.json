@@ -1,0 +1,27 @@
+{
+  "name": "enrollment-predictor",
+  "version": "1.0.0",
+  "description": "•\tPython 3.13 installed locally (optional, for local testing outside Docker)",
+  "main": "index.js",
+  "scripts": {
+    "server": "python server/app.py",
+    "client": "npm --prefix client run dev",
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AI-460-School-of-Business/Enrollment-Predictor.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/AI-460-School-of-Business/Enrollment-Predictor/issues"
+  },
+  "homepage": "https://github.com/AI-460-School-of-Business/Enrollment-Predictor#readme"
+}
