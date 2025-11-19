@@ -183,9 +183,9 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#C2D8FF]/30 to-white">
-      <div className="max-w-6xl mx-auto px-6 py-12">
+      <div className="max-w-6xl mx-auto px-6 py-6">
         {/* Header */}
-        <div className="text-center mb-12">
+        <div className="text-center mb-6">
           <h1 className="text-[#194678] mb-2">Enrollment Predictor</h1>
           <p className="text-[#194678]/70">School of Business</p>
         </div>
