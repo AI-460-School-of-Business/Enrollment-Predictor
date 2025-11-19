@@ -12,15 +12,34 @@ services:
       - postgres_data:/var/lib/postgresql/data/
 
   web:
-    build: ./backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
     volumes:
       - ./backend:/app
+      - ./backend:/data
     ports:
       - "5000:5000"
     env_file:
       - .env
     depends_on:
       - db
+    stop_signal: SIGTERM
+    stop_grace_period: 30s
+
+  db-init:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    volumes:
+      - ./backend:/app
+      - ./backend:/data
+    env_file:
+      - .env
+    depends_on:
+      - db
+    command: python backend/app/database/db_init.py
+    restart: "no"
 
   client:
     image: node:20

@@ -1,0 +1,14 @@
+Recommendations (incremental):
+
+Encoder: Replace per-split LabelEncoder with single OrdinalEncoder(handle_unknown='use_encoded_value', unknown_value=-1).
+Split strategy: Use GroupKFold grouped by course (subj+crse) to test generalization to unseen course sections rather than random split.
+Feature engineering: Add aggregated historical stats: course_mean_enrollment, last_term_enrollment, rolling_trend (difference last 2 terms).
+Prune features: Drop sec initially; re-evaluate validation R² and MAPE distribution.
+Hyperparameters: Try smaller forest (n_estimators 300, max_depth 8, min_samples_leaf 5, min_samples_split 10) to smooth predictions.
+Metric focus: Report median MAPE and distribution (exclude bottom 5% enrollment to reduce volatility).
+Low enrollment handling: Tighten SQL to act >= 15 if strategic; or keep act >= 10 and add class_size_bucket as categorical feature.
+Term decomposition: Parse term into year = term // 100, semester_code = term % 100 (e.g., 10=Fall, 40=Spring). One-hot semester_code.
+Validate leakage: Ensure target (act) not indirectly encoded via term if term is sequential with enrollment trends.
+
+Run Command (Tree):
+C:\Development\ccsu_enrollment\Enrollment-Predictor>docker exec -it enrollment-predictor-web-1 python /app/server/ml/train_model.py --model tree --features min --data-query "SELECT * FROM section_detail_report_sbussection_detail_report_sbus WHERE (term / 100) >= 2022 AND act >= 15;"
