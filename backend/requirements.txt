@@ -1,3 +1,5 @@
 flask
 flask-cors
 psycopg2-binary
+pandas
+scikit-learn
