@@ -3,3 +3,9 @@ flask-cors
 psycopg2-binary
 pandas
 scikit-learn
+numpy
+tensorflow
+matplotlib
+seaborn
+jupyter
+openpyxl
