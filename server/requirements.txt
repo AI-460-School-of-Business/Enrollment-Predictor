@@ -1,2 +1,10 @@
 flask
 psycopg2-binary
+pandas
+numpy
+scikit-learn
+tensorflow
+matplotlib
+seaborn
+jupyter
+openpyxl

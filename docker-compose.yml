@@ -16,13 +16,30 @@ services:
       context: .
       dockerfile: Dockerfile
     volumes:
-      - ./server:/app
+      - ./server:/app/server
+      - ./data:/app/data
     ports:
       - "5000:5000"
     env_file:
       - .env
     depends_on:
       - db
+    stop_signal: SIGTERM
+    stop_grace_period: 30s
+
+  db-init:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ./server:/app/server
+      - ./data:/app/data
+    env_file:
+      - .env
+    depends_on:
+      - db
+    command: python server/database/db_init.py
+    restart: "no"
 
 volumes:
   postgres_data:
