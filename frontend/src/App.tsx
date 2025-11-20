@@ -55,52 +55,50 @@ export default function App() {
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
   const [sortColumn, setSortColumn] = useState<SortColumn | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+  const [isLoading, setIsLoading] = useState(false);
+const [error, setError] = useState<string | null>(null);
 
-  const handleGenerateReport = () => {
-    // Mock data generation for now.
-    // In the future this will be replaced with data from the Python backend.
-    const mockResults: ResultData[] = [
-      {
-        id: "1",
-        confidenceLevel: 92.5,
-        seatsNeeded: 45,
-        courseNumber: "BUS 101",
-        courseTitle: "Introduction to Business",
-      },
-      {
-        id: "2",
-        confidenceLevel: 87.3,
-        seatsNeeded: 38,
-        courseNumber: "BUS 205",
-        courseTitle: "Marketing Fundamentals",
-      },
-      {
-        id: "3",
-        confidenceLevel: 94.1,
-        seatsNeeded: 52,
-        courseNumber: "BUS 310",
-        courseTitle: "Financial Accounting",
-      },
-      {
-        id: "4",
-        confidenceLevel: 89.8,
-        seatsNeeded: 41,
-        courseNumber: "BUS 415",
-        courseTitle: "Strategic Management",
-      },
-      {
-        id: "5",
-        confidenceLevel: 91.2,
-        seatsNeeded: 47,
-        courseNumber: "BUS 220",
-        courseTitle: "Business Statistics",
-      },
-    ];
+const handleGenerateReport = async () => {
+  setIsLoading(true);
+  setError(null);
 
-    setResults(mockResults);
-    setSelectedRows(new Set(mockResults.map((r) => r.id)));
+  try {
+    // If you're running Flask on localhost:5000
+    // and Vite on localhost:5173, this URL is fine.
+    const response = await fetch("http://localhost:5000/api/predict", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model,
+        semesters: selectedSemesters,
+        department: departmentFilter,
+        courseIdentifier: crnFilter,
+        // You can also send info about files later if needed
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Server responded with status ${response.status}`);
+    }
+
+    const data: ResultData[] = await response.json();
+
+    setResults(data);
+    setSelectedRows(new Set(data.map((r) => r.id)));
     setShowResults(true);
-  };
+  } catch (err) {
+    console.error("Error generating report:", err);
+    setError(
+      err instanceof Error ? err.message : "An unknown error occurred."
+    );
+    setShowResults(false);
+  } finally {
+    setIsLoading(false);
+  }
+};
+
 
   const handleSort = (column: SortColumn) => {
     if (sortColumn === column) {
@@ -304,8 +302,9 @@ export default function App() {
                 <Button
                   onClick={handleGenerateReport}
                   className="bg-[#194678] hover:bg-[#194678]/90 text-white px-8 py-6"
+                  disabled={isLoading}
                 >
-                  Generate Report
+                  {isLoading ? "Generating..." : "Generate Report"}
                 </Button>
               </div>
 

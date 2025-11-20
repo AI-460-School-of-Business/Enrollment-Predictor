@@ -12,7 +12,10 @@ services:
       - postgres_data:/var/lib/postgresql/data/
 
   web:
-    build: ./backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    working_dir: /app
     volumes:
       - ./backend:/app
     ports:
@@ -26,14 +29,13 @@ services:
     image: node:20
     working_dir: /app
     volumes:
-      - ./frontend:/app
-      - /app/node_modules
+      - ./frontend:/app 
+      - /app/node_modules 
     ports:
       - "5173:5173"
     command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 5173"
     depends_on:
       - web
-
 
 volumes:
   postgres_data:
