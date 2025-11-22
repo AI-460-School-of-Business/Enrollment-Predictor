@@ -14,6 +14,7 @@ app = Flask(__name__)
 CORS(app, resources={r"/api/*": {"origins": "*"}})
 
 
+# Database Connection
 def get_db_connection():
     """Create and return a database connection."""
     return psycopg2.connect(
@@ -25,6 +26,7 @@ def get_db_connection():
     )
 
 
+# Model Loading
 def find_latest_model(model_dir, prefix):
     """Find the latest model file matching the given prefix."""
     model_path = Path(model_dir)
@@ -49,6 +51,7 @@ def load_model(model_path):
         return pickle.load(f)
 
 
+# Prediction Logic (SQL → Model)
 def sql_predict(payload):
     """
     Execute SQL query, load model, and make predictions.
@@ -176,9 +179,19 @@ def predict_by_sql():
         result = sql_predict(payload)
         return jsonify({"ok": True, "result": result})
     except Exception as exc:
-        # Log the error on the server if you have logging configured
         current_app.logger.exception("Prediction failed")
         return jsonify({"ok": False, "error": str(exc)}), 400
+
+
+@app.route("/api/predict", methods=["POST"])
+def predict():
+    """
+    Frontend currently POSTs here.
+
+    return jsonify({
+        "ok": False,
+        "message": "Prediction endpoint available: use /api/predict/sql for SQL+model predictions."
+    }), 400
 
 
 if __name__ == "__main__":

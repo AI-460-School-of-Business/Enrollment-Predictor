@@ -43,6 +43,10 @@ type SortColumn =
   | "courseTitle";
 type SortDirection = "asc" | "desc";
 
+// For Docker, set VITE_API_URL in env; for local dev, fallback to localhost
+const API_BASE_URL =
+  (import.meta as any).env?.VITE_API_URL ?? "http://localhost:5000";
+
 export default function App() {
   const [file1, setFile1] = useState<File | null>(null);
   const [file2, setFile2] = useState<File | null>(null);
@@ -56,49 +60,60 @@ export default function App() {
   const [sortColumn, setSortColumn] = useState<SortColumn | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const [isLoading, setIsLoading] = useState(false);
-const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-const handleGenerateReport = async () => {
-  setIsLoading(true);
-  setError(null);
+  const handleGenerateReport = async () => {
+    setIsLoading(true);
+    setError(null);
 
-  try {
-    // If you're running Flask on localhost:5000
-    // and Vite on localhost:5173, this URL is fine.
-    const response = await fetch("http://localhost:5000/api/predict", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model,
-        semesters: selectedSemesters,
-        department: departmentFilter,
-        courseIdentifier: crnFilter,
-        // You can also send info about files later if needed
-      }),
-    });
+    try {
+      // TODO: Build SQL string
+      // Temporary placeholder query
+      const sql = `
+        SELECT *
+        FROM enrollment_predictions
+        LIMIT 100;
+      `;
 
-    if (!response.ok) {
-      throw new Error(`Server responded with status ${response.status}`);
+      const response = await fetch(`${API_BASE_URL}/api/predict/sql`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          
+          sql,
+          // model,
+          // semesters: selectedSemesters,
+          // department: departmentFilter,
+          // courseIdentifier: crnFilter,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Server responded with status ${response.status}`);
+      }
+
+      const json = await response.json();
+      console.log("Raw backend response:", json);
+
+      // TODO: Shape backend data into ResultData[]
+
+      const data = json as ResultData[];
+
+      setResults(data);
+      setSelectedRows(new Set(data.map((r) => r.id)));
+      setShowResults(true);
+    } catch (err) {
+      console.error("Error generating report:", err);
+      setError(
+        err instanceof Error ? err.message : "An unknown error occurred.",
+      );
+      setShowResults(false);
+    } finally {
+      setIsLoading(false);
     }
-
-    const data: ResultData[] = await response.json();
-
-    setResults(data);
-    setSelectedRows(new Set(data.map((r) => r.id)));
-    setShowResults(true);
-  } catch (err) {
-    console.error("Error generating report:", err);
-    setError(
-      err instanceof Error ? err.message : "An unknown error occurred."
-    );
-    setShowResults(false);
-  } finally {
-    setIsLoading(false);
-  }
-};
-
+  };
 
   const handleSort = (column: SortColumn) => {
     if (sortColumn === column) {
@@ -172,8 +187,6 @@ const handleGenerateReport = async () => {
 
   // Placeholder: no real export logic for now
   const handleExport = (format: "csv" | "xlsx") => {
-    // Intentionally left blank for now.
-    // This will be implemented later.
     console.log(`Export (${format}) clicked – logic to be implemented.`);
   };
 
@@ -296,6 +309,13 @@ const handleGenerateReport = async () => {
                   />
                 </div>
               </div>
+
+              {/* Error message */}
+              {error && (
+                <div className="text-red-600 text-sm border border-red-300 bg-red-50 px-4 py-2 rounded">
+                  Error: {error}
+                </div>
+              )}
 
               {/* Generate Button */}
               <div className="flex justify-center">
