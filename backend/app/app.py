@@ -185,9 +185,7 @@ def predict_by_sql():
 
 @app.route("/api/predict", methods=["POST"])
 def predict():
-    """
-    Frontend currently POSTs here.
-
+    
     return jsonify({
         "ok": False,
         "message": "Prediction endpoint available: use /api/predict/sql for SQL+model predictions."

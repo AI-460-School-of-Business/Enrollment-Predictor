@@ -13,11 +13,10 @@ services:
 
   web:
     build:
-      context: ./backend
+      context: ./
       dockerfile: Dockerfile
     volumes:
-      - ./backend:/app
-      - ./backend:/data
+      - .:/app
     ports:
       - "5000:5000"
     env_file:
@@ -29,16 +28,15 @@ services:
 
   db-init:
     build:
-      context: ./backend
+      context: ./
       dockerfile: Dockerfile
     volumes:
       - ./backend:/app
-      - ./backend:/data
     env_file:
       - .env
     depends_on:
       - db
-    command: python backend/app/database/db_init.py
+    command: python app/database/db_init.py
     restart: "no"
 
   client:
