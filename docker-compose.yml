@@ -13,11 +13,10 @@ services:
 
   web:
     build:
-      context: .
+      context: ./
       dockerfile: Dockerfile
     volumes:
-      - ./server:/app/server
-      - ./data:/app/data
+      - .:/app
     ports:
       - "5000:5000"
     env_file:
@@ -29,17 +28,29 @@ services:
 
   db-init:
     build:
-      context: .
+      context: ./
       dockerfile: Dockerfile
     volumes:
-      - ./server:/app/server
-      - ./data:/app/data
+      - ./backend:/app
     env_file:
       - .env
     depends_on:
       - db
-    command: python server/database/db_init.py
+    command: python app/database/db_init.py
     restart: "no"
+
+  client:
+    image: node:20
+    working_dir: /app
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "5173:5173"
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 5173"
+    depends_on:
+      - web
+
 
 volumes:
   postgres_data:
