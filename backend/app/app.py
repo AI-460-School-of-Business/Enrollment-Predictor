@@ -11,8 +11,7 @@ from datetime import datetime
 app = Flask(__name__)
 
 # Allow frontend (Vite dev server) to call this API
-CORS(app, resources={r"/api/*": {"origins": "*"}})
-
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 # Database Connection
 def get_db_connection():
@@ -25,6 +24,57 @@ def get_db_connection():
         password=os.getenv("POSTGRES_PASSWORD", "DBPassword")
     )
 
+def _find_table_with_column(conn, column_name):
+    """Return the first public table name that contains column_name, or None."""
+    q = """
+        SELECT table_name
+        FROM information_schema.columns
+        WHERE column_name = %s
+          AND table_schema = 'public'
+        ORDER BY table_name
+        LIMIT 1;
+    """
+    df = pd.read_sql_query(q, conn, params=(column_name,))
+    return df['table_name'].iloc[0] if not df.empty else None
+
+
+@app.route("/api/semesters", methods=["GET"])
+def get_semesters():
+    """
+    Discover a table with `term_desc` and return distinct term_desc values.
+    Response: { ok: True, semesters: ["Spring 2025", "Fall 2024", ...] }
+    """
+    conn = None
+    try:
+        conn = get_db_connection()
+        table = _find_table_with_column(conn, "term_desc")
+        if not table:
+            return jsonify({"ok": False, "semesters": [], "error": "No table with 'term_desc' found"}), 404
+
+        # If the table also has a numeric 'term' column we can order by it (newest first)
+        has_term = not pd.read_sql_query(
+            """
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name = %s AND column_name = 'term' AND table_schema = 'public' LIMIT 1
+            """,
+            conn, params=(table,)
+        ).empty
+
+        if has_term:
+            q = f"SELECT DISTINCT term_desc FROM {table} ORDER BY term DESC NULLS LAST;"
+            df = pd.read_sql_query(q, conn)
+        else:
+            q = f"SELECT DISTINCT term_desc FROM {table} ORDER BY term_desc DESC;"
+            df = pd.read_sql_query(q, conn)
+
+        semesters = df['term_desc'].dropna().astype(str).tolist()
+        return jsonify({"ok": True, "semesters": semesters})
+    except Exception as exc:
+        current_app.logger.exception("Failed to fetch semesters")
+        return jsonify({"ok": False, "error": str(exc)}), 500
+    finally:
+        if conn:
+            conn.close()
 
 # Model Loading
 def find_latest_model(model_dir, prefix):
@@ -167,11 +217,7 @@ def predict_by_sql():
     POST JSON payload:
     {
       "sql": "SELECT subj, crse, term, ... FROM section_detail_report_sbussection_detail_report_sbus WHERE (term / 100) = 2025;",
-      "model_path": "/app/data/prediction_models/enrollment_tree_min_20251120_173605.pkl",   # optional
-      "model_filename": "enrollment_tree_min_20251120_173605.pkl",                        # optional
-      "model_prefix": "enrollment_tree_tree_min_",                                         # optional, chooses newest match
-      "model_dir": "/app/data/prediction_models",                                         # optional override
-      "features": "min"                                                                   # optional, default "min"
+      ...
     }
     """
     try:
@@ -190,6 +236,43 @@ def predict():
         "ok": False,
         "message": "Prediction endpoint available: use /api/predict/sql for SQL+model predictions."
     }), 400
+
+
+@app.route("/sql", methods=["GET"])
+def sql_request():
+    sql = request.args.get("sql")
+    if not sql:
+        return jsonify({"ok": False, "error": "Missing required parameter: sql"}), 400
+
+    conn = get_db_connection()
+    try:
+        df = pd.read_sql_query(sql, conn)
+    except Exception as exc:
+        current_app.logger.exception("SQL request failed")
+        return jsonify({"ok": False, "error": str(exc)}), 400
+    finally:
+        try:
+            conn.close()
+        except Exception:
+            pass
+
+    # JSON conversion
+    rows = []
+    for idx in range(len(df)):
+        row = {}
+        for col in df.columns:
+            val = df.iloc[idx][col]
+            if hasattr(val, "item"):
+                try:
+                    val = val.item()
+                except Exception:
+                    pass
+            if pd.isna(val):
+                val = None
+            row[col] = val
+        rows.append(row)
+
+    return jsonify({"ok": True, "sql": sql, "row_count": len(rows), "rows": rows})
 
 
 if __name__ == "__main__":
