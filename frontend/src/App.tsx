@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { FileUpload } from "./components/FileUpload";
-import { SemesterSelector } from "./components/SemesterSelector";
+// ⛔ REMOVE this line:
+// import { SemesterSelector } from "./components/SemesterSelector";
 import { Button } from "./components/ui/button";
 import { Input } from "./components/ui/input";
 import {
@@ -26,7 +27,15 @@ import {
 } from "./components/ui/dropdown-menu";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui/tabs";
 import { Checkbox } from "./components/ui/checkbox";
-import { Download, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "./components/ui/popover";
+import {
+  Download,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  ChevronDown,
+} from "lucide-react";
+
  
 interface ResultData {
   id: string;
@@ -42,6 +51,89 @@ type SortColumn =
   | "courseNumber"
   | "courseTitle";
 type SortDirection = "asc" | "desc";
+
+interface SemesterOption {
+  term: number;
+  term_desc: string;
+}
+
+interface SemesterSelectorProps {
+  allSemesters: SemesterOption[];
+  selectedSemesters: string[];          // we store the selected term_desc strings
+  onSelectionChange: (semesters: string[]) => void;
+  isLoading?: boolean;
+  error?: string | null;
+}
+
+function SemesterSelector({
+  allSemesters,
+  selectedSemesters,
+  onSelectionChange,
+  isLoading,
+  error,
+}: SemesterSelectorProps) {
+  const handleToggle = (termDesc: string) => {
+    if (selectedSemesters.includes(termDesc)) {
+      onSelectionChange(selectedSemesters.filter((s) => s !== termDesc));
+    } else {
+      onSelectionChange([...selectedSemesters, termDesc]);
+    }
+  };
+
+  const buttonLabel = (() => {
+    if (isLoading) return "Loading semesters...";
+    if (error) return "Error loading semesters";
+    if (selectedSemesters.length > 0) {
+      return `${selectedSemesters.length} selected`;
+    }
+    return "Select semesters";
+  })();
+
+  return (
+    <div className="space-y-2">
+      <label className="text-sm">Semesters</label>
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            className="w-full justify-between border-gray-300 hover:border-[#94BAEB]"
+            disabled={isLoading || !!error || allSemesters.length === 0}
+          >
+            <span className="text-sm">{buttonLabel}</span>
+            <ChevronDown className="w-4 h-4 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-64 p-4" align="start">
+          {error && (
+            <div className="text-xs text-red-600 mb-2">
+              Failed to load semesters.
+            </div>
+          )}
+          <div className="space-y-2 max-h-64 overflow-y-auto">
+            {allSemesters.map((semester) => (
+              <div key={semester.term} className="flex items-center space-x-2">
+                <Checkbox
+                  id={semester.term_desc}
+                  checked={selectedSemesters.includes(semester.term_desc)}
+                  onCheckedChange={() => handleToggle(semester.term_desc)}
+                />
+                <label
+                  htmlFor={semester.term_desc}
+                  className="text-sm cursor-pointer flex-1"
+                >
+                  {semester.term_desc}
+                </label>
+              </div>
+            ))}
+            {!isLoading && !error && allSemesters.length === 0 && (
+              <div className="text-xs text-gray-500">No semesters found.</div>
+            )}
+          </div>
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+}
  
 // For Docker, set VITE_API_URL in env; for local dev, fallback to localhost
 const API_BASE_URL =
@@ -52,6 +144,11 @@ export default function App() {
   const [file2, setFile2] = useState<File | null>(null);
   const [model, setModel] = useState<string>("");
   const [selectedSemesters, setSelectedSemesters] = useState<string[]>([]);
+
+  const [semesterOptions, setSemesterOptions] = useState<SemesterOption[]>([]);
+  const [isLoadingSemesters, setIsLoadingSemesters] = useState(false);
+  const [semestersError, setSemestersError] = useState<string | null>(null);
+  
   const [crnFilter, setCrnFilter] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState<string>("");
   const [results, setResults] = useState<ResultData[]>([]);
@@ -64,8 +161,46 @@ export default function App() {
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+    const fetchSemesters = async () => {
+      setIsLoadingSemesters(true);
+      setSemestersError(null);
+
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/semesters`);
+        if (!res.ok) {
+          throw new Error(`Server responded with status ${res.status}`);
+        }
+
+        const data = await res.json();
+        if (!data.ok) {
+          throw new Error(data.error || "Backend returned ok=false");
+        }
+
+        const semesters = (data.semesters ?? []) as SemesterOption[];
+
+        // Sort by term ascending just to be safe (even though SQL already does)
+        semesters.sort((a, b) => a.term - b.term);
+
+        setSemesterOptions(semesters);
+      } catch (err) {
+        console.error("Failed to fetch semesters:", err);
+        setSemestersError(
+          err instanceof Error ? err.message : "Unknown error fetching semesters"
+        );
+      } finally {
+        setIsLoadingSemesters(false);
+      }
+    };
+
+    fetchSemesters();
+  }, []);
  
   const handleGenerateReport = async () => {
+    // Temporary logging of selected semesters
+    console.log("Selected semesters:", selectedSemesters);
+
     setIsLoading(true);
     setError(null);
  
@@ -266,8 +401,11 @@ export default function App() {
  
                 {/* Semesters */}
                 <SemesterSelector
+                  allSemesters={semesterOptions}
                   selectedSemesters={selectedSemesters}
                   onSelectionChange={setSelectedSemesters}
+                  isLoading={isLoadingSemesters}
+                  error={semestersError}
                 />
               </div>
  

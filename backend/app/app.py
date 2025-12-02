@@ -37,45 +37,6 @@ def _find_table_with_column(conn, column_name):
     df = pd.read_sql_query(q, conn, params=(column_name,))
     return df['table_name'].iloc[0] if not df.empty else None
 
-
-@app.route("/api/semesters", methods=["GET"])
-def get_semesters():
-    """
-    Discover a table with `term_desc` and return distinct term_desc values.
-    Response: { ok: True, semesters: ["Spring 2025", "Fall 2024", ...] }
-    """
-    conn = None
-    try:
-        conn = get_db_connection()
-        table = _find_table_with_column(conn, "term_desc")
-        if not table:
-            return jsonify({"ok": False, "semesters": [], "error": "No table with 'term_desc' found"}), 404
-
-        # If the table also has a numeric 'term' column we can order by it (newest first)
-        has_term = not pd.read_sql_query(
-            """
-            SELECT 1 FROM information_schema.columns
-            WHERE table_name = %s AND column_name = 'term' AND table_schema = 'public' LIMIT 1
-            """,
-            conn, params=(table,)
-        ).empty
-
-        if has_term:
-            q = f"SELECT DISTINCT term_desc FROM {table} ORDER BY term DESC NULLS LAST;"
-            df = pd.read_sql_query(q, conn)
-        else:
-            q = f"SELECT DISTINCT term_desc FROM {table} ORDER BY term_desc DESC;"
-            df = pd.read_sql_query(q, conn)
-
-        semesters = df['term_desc'].dropna().astype(str).tolist()
-        return jsonify({"ok": True, "semesters": semesters})
-    except Exception as exc:
-        current_app.logger.exception("Failed to fetch semesters")
-        return jsonify({"ok": False, "error": str(exc)}), 500
-    finally:
-        if conn:
-            conn.close()
-
 # Model Loading
 def find_latest_model(model_dir, prefix):
     """Find the latest model file matching the given prefix."""
@@ -100,6 +61,73 @@ def load_model(model_path):
     with open(model_path, 'rb') as f:
         return pickle.load(f)
 
+@app.route("/api/semesters", methods=["GET"])
+def get_semesters():
+    """
+    Return distinct (term, term_desc) values from a table that has them.
+    Response:
+      {
+        "ok": True,
+        "semesters": [
+          { "term": 202420, "term_desc": "Spring 2024" },
+          { "term": 202430, "term_desc": "Summer 2024" },
+          ...
+        ]
+      }
+    """
+    conn = None
+    try:
+        conn = get_db_connection()
+
+        # Find a table that has BOTH term and term_desc
+        q_table = """
+            SELECT table_name
+            FROM information_schema.columns
+            WHERE table_schema = 'public'
+              AND column_name IN ('term', 'term_desc')
+            GROUP BY table_name
+            HAVING COUNT(DISTINCT column_name) = 2
+            ORDER BY table_name
+            LIMIT 1;
+        """
+        df_table = pd.read_sql_query(q_table, conn)
+        if df_table.empty:
+            return jsonify({
+                "ok": False,
+                "semesters": [],
+                "error": "No table with both 'term' and 'term_desc' found"
+            }), 404
+
+        table = df_table["table_name"].iloc[0]
+
+        # Get distinct terms + descriptions, sorted by term (lowest → highest)
+        q_semesters = f"""
+            SELECT DISTINCT term, term_desc
+            FROM {table}
+            WHERE term IS NOT NULL AND term_desc IS NOT NULL
+            ORDER BY term ASC;
+        """
+        df_semesters = pd.read_sql_query(q_semesters, conn)
+
+        semesters = []
+        for _, row in df_semesters.iterrows():
+            term_val = row["term"]
+            term_desc_val = row["term_desc"]
+            if pd.isna(term_val) or pd.isna(term_desc_val):
+                continue
+            semesters.append({
+                "term": int(term_val),
+                "term_desc": str(term_desc_val),
+            })
+
+        return jsonify({"ok": True, "semesters": semesters})
+
+    except Exception as exc:
+        current_app.logger.exception("Failed to fetch semesters")
+        return jsonify({"ok": False, "error": str(exc), "semesters": []}), 500
+    finally:
+        if conn:
+            conn.close()
 
 # Prediction Logic (SQL → Model)
 def sql_predict(payload):
@@ -273,7 +301,6 @@ def sql_request():
         rows.append(row)
 
     return jsonify({"ok": True, "sql": sql, "row_count": len(rows), "rows": rows})
-
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
