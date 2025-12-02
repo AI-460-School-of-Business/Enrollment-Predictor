@@ -144,6 +144,7 @@ const API_BASE_URL =
  
 export default function App() {
   const [files1, setFiles1] = useState<File[]>([]);
+  const [trainingFile, setTrainingFile] = useState<File[]>([]);
   const [model, setModel] = useState<string>("");
   const [selectedSemesters, setSelectedSemesters] = useState<string[]>([]);
 
@@ -574,10 +575,55 @@ export default function App() {
                 </div>
               )}
             </TabsContent>
- 
+
             <TabsContent value="training" className="py-8">
-              <div className="text-center text-gray-500">
-                <p>Training Mode - Coming Soon</p>
+              <div className="space-y-6">
+
+                {/* Schema Information */}
+                <div className="border border-[#94BAEB] rounded-lg overflow-hidden">
+                  <div className="bg-[#194678] text-white px-4 py-3">
+                    <h3 className="text-white">Schema Information</h3>
+                  </div>
+                  <div className="p-6 space-y-6">
+                    <div className="bg-[#C2D8FF]/20 rounded-md p-4 space-y-3">
+                      {/* Feature Description */}
+                      <div className="py-2">
+                        <p className="text-md mb-1">Feature Description</p>
+                        <p className="text-sm">Text here...</p>
+                      </div>
+                      {/* Required Fields */}
+                      <div className="py-2">
+                        <p className="text-md mb-1">Required Fields</p>
+                        <p className="text-sm">Text here...</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* File Upload for Training Data */}
+                <div>
+                  <FileUpload
+                    label="Upload Training Data"
+                    onFileChange={setTrainingFile}
+                    expectedHeaders={[
+                      "Course ID",
+                      "Semester",
+                      "Enrollment",
+                      "Department",
+                      "Instructor",
+                    ]}
+                  />
+                </div>
+
+                {/* Train Model Button */}
+                <div className="flex justify-center">
+                  <Button
+                    className="bg-[#194678] hover:bg-[#194678]/90 text-white px-8 py-6"
+                    disabled={!trainingFile}
+                  >
+                    Train Model
+                  </Button>
+                </div>
               </div>
             </TabsContent>
           </Tabs>
