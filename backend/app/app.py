@@ -7,9 +7,34 @@ import pandas as pd
 import os
 from pathlib import Path
 from datetime import datetime
+import json
+from pathlib import Path
 
 app = Flask(__name__)
 
+# Load subject → department mapping
+BASE_DIR = Path(__file__).resolve().parent  # .../backend/app
+CANDIDATE_PATHS = [
+    BASE_DIR / "subjectDepartmentMap.json",        # .../backend/app/subjectDepartmentMap.json
+    BASE_DIR.parent / "subjectDepartmentMap.json"  # .../backend/subjectDepartmentMap.json
+]
+
+SUBJECT_DEPT_MAP: dict[str, str] = {}
+_loaded_path = None
+
+for path in CANDIDATE_PATHS:
+    if path.exists():
+        with open(path, "r") as f:
+            SUBJECT_DEPT_MAP = json.load(f)
+        _loaded_path = path
+        app.logger.info("Loaded subjectDepartmentMap.json from %s", path)
+        break
+
+if not SUBJECT_DEPT_MAP:
+    app.logger.error(
+        "subjectDepartmentMap.json not found or empty. Checked: %s",
+        ", ".join(str(p) for p in CANDIDATE_PATHS),
+    )
 # Allow frontend (Vite dev server) to call this API
 CORS(app, resources={r"/*": {"origins": "*"}})
 
@@ -128,6 +153,74 @@ def get_semesters():
     finally:
         if conn:
             conn.close()
+
+@app.route("/api/departments", methods=["GET"])
+def get_departments():
+    """
+    Return departments whose subject codes appear in the database's `subj` column,
+    mapped via subjectDepartmentMap.json.
+
+    Response:
+    {
+      "ok": true,
+      "departments": [
+        { "code": "AC",  "name": "Accounting" },
+        { "code": "FIN", "name": "Finance" },
+        ...
+      ]
+    }
+    """
+    conn = None
+    try:
+        conn = get_db_connection()
+
+        # Find a table that has a 'subj' column
+        table = _find_table_with_column(conn, "subj")
+        if not table:
+            return jsonify({
+                "ok": False,
+                "departments": [],
+                "error": "No table with column 'subj' found"
+            }), 404
+
+        # Get distinct subject codes from that table
+        q_subj = f"""
+            SELECT DISTINCT subj
+            FROM {table}
+            WHERE subj IS NOT NULL;
+        """
+        df_subj = pd.read_sql_query(q_subj, conn)
+
+        if df_subj.empty:
+            return jsonify({"ok": True, "departments": []})
+
+        # Map subj codes to department names using SUBJECT_DEPT_MAP
+        dept_dict = {}  # code -> name (dedup)
+        for _, row in df_subj.iterrows():
+            code = row["subj"]
+            if pd.isna(code):
+                continue
+            code_str = str(code).strip().upper()
+            if code_str in SUBJECT_DEPT_MAP:
+                dept_dict[code_str] = SUBJECT_DEPT_MAP[code_str]
+
+        departments = [
+            {"code": code, "name": name}
+            for code, name in dept_dict.items()
+        ]
+
+        # Sort alphabetically by department name
+        departments.sort(key=lambda d: d["name"])
+
+        return jsonify({"ok": True, "departments": departments})
+
+    except Exception as exc:
+        current_app.logger.exception("Failed to fetch departments")
+        return jsonify({"ok": False, "error": str(exc), "departments": []}), 500
+    finally:
+        if conn:
+            conn.close()
+
 
 # Prediction Logic (SQL → Model)
 def sql_predict(payload):

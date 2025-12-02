@@ -57,6 +57,11 @@ interface SemesterOption {
   term_desc: string;
 }
 
+interface DepartmentOption {
+  code: string;
+  name: string;
+}
+
 interface SemesterSelectorProps {
   allSemesters: SemesterOption[];
   selectedSemesters: string[];          // we store the selected term_desc strings
@@ -151,6 +156,10 @@ export default function App() {
   
   const [crnFilter, setCrnFilter] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState<string>("");
+  const [departments, setDepartments] = useState<DepartmentOption[]>([]);
+  const [isLoadingDepartments, setIsLoadingDepartments] = useState(false);
+  const [departmentsError, setDepartmentsError] = useState<string | null>(null);
+
   const [results, setResults] = useState<ResultData[]>([]);
   const [columns, setColumns] = useState<string[]>([]);
   const [rawResponse, setRawResponse] = useState<any>(null);
@@ -196,10 +205,43 @@ export default function App() {
 
     fetchSemesters();
   }, []);
+
+  useEffect(() => {
+  const fetchDepartments = async () => {
+    setIsLoadingDepartments(true);
+    setDepartmentsError(null);
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/departments`);
+      if (!res.ok) {
+        throw new Error(`Server responded with status ${res.status}`);
+      }
+
+      const data = await res.json();
+      if (!data.ok) {
+        throw new Error(data.error || "Backend returned ok=false");
+      }
+
+      const depts = (data.departments ?? []) as DepartmentOption[];
+      setDepartments(depts);
+    } catch (err) {
+      console.error("Failed to fetch departments:", err);
+      setDepartmentsError(
+        err instanceof Error ? err.message : "Unknown error fetching departments"
+      );
+    } finally {
+      setIsLoadingDepartments(false);
+    }
+  };
+
+  fetchDepartments();
+}, []);
+
  
   const handleGenerateReport = async () => {
     // Temporary logging of selected semesters
     console.log("Selected semesters:", selectedSemesters);
+    console.log("Selected department:", departmentFilter || "(none)"); 
 
     setIsLoading(true);
     setError(null);
@@ -417,27 +459,45 @@ export default function App() {
                   <Select
                     value={departmentFilter}
                     onValueChange={setDepartmentFilter}
+                    disabled={
+                      isLoadingDepartments ||
+                      !!departmentsError ||
+                      departments.length === 0
+                    }
                   >
                     <SelectTrigger className="border-gray-300 hover:border-[#94BAEB]">
-                      <SelectValue placeholder="Select department" />
+                      <SelectValue
+                        placeholder={
+                          isLoadingDepartments
+                            ? "Loading departments..."
+                            : departmentsError
+                            ? "Error loading departments"
+                            : "Select department"
+                        }
+                      />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="accounting">Accounting</SelectItem>
-                      <SelectItem value="business">Business</SelectItem>
-                      <SelectItem value="business-analytics">
-                        Business Analytics
-                      </SelectItem>
-                      <SelectItem value="finance">Finance</SelectItem>
-                      <SelectItem value="management-organization">
-                        Management &amp; Organization
-                      </SelectItem>
-                      <SelectItem value="mis">
-                        Management Information Systems
-                      </SelectItem>
-                      <SelectItem value="marketing">Marketing</SelectItem>
+                      {departments.map((dept) => (
+                        <SelectItem key={dept.code} value={dept.name}>
+                          {dept.name}
+                        </SelectItem>
+                      ))}
+                      {!isLoadingDepartments &&
+                        !departmentsError &&
+                        departments.length === 0 && (
+                          <div className="px-2 py-1 text-xs text-gray-500">
+                            No departments found.
+                          </div>
+                        )}
                     </SelectContent>
                   </Select>
+                  {departmentsError && (
+                    <p className="text-xs text-red-600 mt-1">
+                      Failed to load departments.
+                    </p>
+                  )}
                 </div>
+
  
                 {/* Course Identifier Filter */}
                 <div className="space-y-2">
