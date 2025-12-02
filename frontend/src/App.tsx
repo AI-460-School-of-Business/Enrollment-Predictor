@@ -1,7 +1,5 @@
 import { useState, useEffect } from "react";
 import { FileUpload } from "./components/FileUpload";
-// ⛔ REMOVE this line:
-// import { SemesterSelector } from "./components/SemesterSelector";
 import { Button } from "./components/ui/button";
 import { Input } from "./components/ui/input";
 import {
@@ -145,8 +143,7 @@ const API_BASE_URL =
   (import.meta as any).env?.VITE_API_URL ?? "http://localhost:5000";
  
 export default function App() {
-  const [file1, setFile1] = useState<File | null>(null);
-  const [file2, setFile2] = useState<File | null>(null);
+  const [files1, setFiles1] = useState<File[]>([]);
   const [model, setModel] = useState<string>("");
   const [selectedSemesters, setSelectedSemesters] = useState<string[]>([]);
 
@@ -402,19 +399,10 @@ export default function App() {
  
             <TabsContent value="prediction" className="space-y-6">
               {/* File Uploads */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
                 <FileUpload
-                  label="Data 1"
-                  onFileChange={setFile1}
-                  expectedHeaders={[
-                    "Placeholder Header 1",
-                    "Header 2",
-                    "Header 3",
-                  ]}
-                />
-                <FileUpload
-                  label="Data 2"
-                  onFileChange={setFile2}
+                  label="Data Upload"
+                  onFileChange={setFiles1}
                   expectedHeaders={[
                     "Placeholder Header 1",
                     "Header 2",
