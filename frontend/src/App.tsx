@@ -400,9 +400,16 @@ export default function App() {
                   label="Data Upload"
                   onFileChange={setFiles1}
                   expectedHeaders={[
-                    "Placeholder Header 1",
-                    "Header 2",
-                    "Header 3",
+                    "Term",
+                    "Term Desc",
+                    "CRN",
+                    "Subj",
+                    "Crse",
+                    "Sec",
+                    "Credits",
+                    "Title",
+                    "Act",
+                    "XL Act",
                   ]}
                 />
               </div>
