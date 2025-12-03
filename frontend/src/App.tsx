@@ -369,12 +369,38 @@ export default function App() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#C2D8FF]/30 to-white">
       <div className="max-w-6xl mx-auto px-6 py-6">
-        {/* Header */}
-        <div className="text-center mb-6">
-          <h1 className="text-[#194678] mb-2">Enrollment Predictor</h1>
-          <p className="text-[#194678]/70">School of Business</p>
+        <div className="w-full mb-6 flex items-center justify-between gap-8">
+          
+          {/* Logo */}
+          <div className="w-64 h-64 flex items-center justify-center">
+            <img
+              className="h-64 w-64 object-contain"
+              src="SOBblue.png"
+              alt="SOB Logo"
+            />
+          </div>
+
+          {/* Title Block 1 */}
+          <div className="w-64 h-64 flex items-center justify-center">
+            <div className="text-center">
+              <div
+                className="text-[#194678] mb-1"
+                style={{ fontSize: "2rem", fontWeight: 700 }}>
+                Course Sense
+              </div>
+              <p className="text-[#194678]/70 text-lg font-medium">Enrollment Predictor</p>
+            </div>
+          </div>
+
+          {/* Title Block 2 */}
+          <div className="w-64 h-64 flex items-center justify-center">
+            <div className="text-center">
+              {/*Blank for now to keep the columns aligned*/}
+            </div>
+          </div>
+
         </div>
- 
+
         {/* Main Content with Tabs */}
         <div className="bg-white rounded-lg shadow-lg p-8 border-t-4 border-[#194678]">
           <Tabs defaultValue="prediction" className="w-full">
