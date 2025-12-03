@@ -60,12 +60,17 @@ def analyze_per_course_accuracy(
     
     # Group by course
     course_stats = analysis_df.groupby(['subj', 'crse']).agg({
-        'actual': ['mean', 'count'],
+        'actual': ['mean', 'count', 'std'],
         'abs_error': 'mean',
         'pct_error': 'mean'
     }).round(2)
     
-    course_stats.columns = ['avg_enrollment', 'predictions_count', 'mae', 'mape']
+    course_stats.columns = ['avg_enrollment', 'predictions_count', 'std_enrollment', 'mae', 'mape']
+    
+    # Calculate variability (Coefficient of Variation)
+    course_stats['variability'] = (course_stats['std_enrollment'] / course_stats['avg_enrollment']) * 100
+    course_stats['variability'] = course_stats['variability'].fillna(0).round(1)
+    
     course_stats = course_stats.sort_values('mape')
     
     # Print report
@@ -79,38 +84,38 @@ def analyze_per_course_accuracy(
 
 def _print_accuracy_report(course_stats: pd.DataFrame):
     """Print per-course accuracy report."""
-    print("\n" + "="*80)
+    print("\n" + "="*95)
     print("PER-COURSE PREDICTION ACCURACY REPORT")
-    print("="*80)
+    print("="*95)
     print(f"Total courses in validation set: {len(course_stats)}")
     print(f"\nTop 10 Most Predictable Courses (Lowest MAPE):")
-    print("-"*80)
-    print(f"{'Course':<12} {'Avg Enroll':<12} {'Predictions':<12} {'MAE':<12} {'MAPE':<12}")
-    print("-"*80)
+    print("-"*95)
+    print(f"{'Course':<12} {'Avg Enroll':<12} {'Predictions':<12} {'MAE':<12} {'MAPE':<12} {'VARIABILITY':<12}")
+    print("-"*95)
     
     for (subj, crse), row in course_stats.head(10).iterrows():
         course_name = f"{subj} {crse}"
         print(f"{course_name:<12} {row['avg_enrollment']:<12.1f} {int(row['predictions_count']):<12} "
-              f"{row['mae']:<12.2f} {row['mape']:<12.1f}%")
+              f"{row['mae']:<12.2f} {row['mape']:<12.1f}% {row['variability']:<12.1f}%")
     
     print(f"\nBottom 10 Least Predictable Courses (Highest MAPE):")
-    print("-"*80)
-    print(f"{'Course':<12} {'Avg Enroll':<12} {'Predictions':<12} {'MAE':<12} {'MAPE':<12}")
-    print("-"*80)
+    print("-"*95)
+    print(f"{'Course':<12} {'Avg Enroll':<12} {'Predictions':<12} {'MAE':<12} {'MAPE':<12} {'VARIABILITY':<12}")
+    print("-"*95)
     
     for (subj, crse), row in course_stats.tail(10).iterrows():
         course_name = f"{subj} {crse}"
         print(f"{course_name:<12} {row['avg_enrollment']:<12.1f} {int(row['predictions_count']):<12} "
-              f"{row['mae']:<12.2f} {row['mape']:<12.1f}%")
+              f"{row['mae']:<12.2f} {row['mape']:<12.1f}% {row['variability']:<12.1f}%")
     
-    print("\n" + "="*80)
+    print("\n" + "="*95)
     
     # Summary statistics
     print(f"\nPrediction Accuracy Summary:")
     print(f"  Courses with MAPE < 20% (Good):        {(course_stats['mape'] < 20).sum()} courses")
     print(f"  Courses with MAPE 20-40% (Moderate):   {((course_stats['mape'] >= 20) & (course_stats['mape'] < 40)).sum()} courses")
     print(f"  Courses with MAPE > 40% (Poor):        {(course_stats['mape'] >= 40).sum()} courses")
-    print("="*80 + "\n")
+    print("="*95 + "\n")
 
 
 def _save_accuracy_report(course_stats: pd.DataFrame, model_type: str):
@@ -126,11 +131,11 @@ def _save_accuracy_report(course_stats: pd.DataFrame, model_type: str):
         
         # Prepare DataFrame for export with better column names
         export_df = course_stats.reset_index()
-        export_df.columns = ['Subject', 'Course', 'Avg_Enrollment', 'Num_Predictions', 'MAE', 'MAPE']
+        export_df.columns = ['Subject', 'Course', 'Avg_Enrollment', 'Num_Predictions', 'Std_Enrollment', 'MAE', 'MAPE', 'Variability_Pct']
         export_df['Rank'] = range(1, len(export_df) + 1)
         
         # Reorder columns
-        export_df = export_df[['Rank', 'Subject', 'Course', 'Avg_Enrollment', 'Num_Predictions', 'MAE', 'MAPE']]
+        export_df = export_df[['Rank', 'Subject', 'Course', 'Avg_Enrollment', 'Num_Predictions', 'Std_Enrollment', 'Variability_Pct', 'MAE', 'MAPE']]
         
         # Save to CSV
         export_df.to_csv(csv_path, index=False)
