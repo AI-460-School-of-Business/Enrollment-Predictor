@@ -52,8 +52,41 @@ class FeatureEngineer:
         
         if rows_removed > 0:
             print(f"Removed {rows_removed} rows with missing enrollment data")
+            
+        # Aggregate data by Course and Term (summing enrollment)
+        print("\nAggregating data by Subject, Course, and Term...")
         
-        print(f"Data after cleaning: {features_data.shape}")
+        # Determine grouping columns
+        group_cols = []
+        if key_cols['term']:
+            group_cols.append(key_cols['term'])
+        else:
+            if key_cols['year']: group_cols.append(key_cols['year'])
+            if key_cols['semester']: group_cols.append(key_cols['semester'])
+            
+        group_cols.append(key_cols['subj'])
+        group_cols.append(key_cols['crse'])
+        
+        # Determine aggregation rules
+        agg_dict = {self.target_column: 'sum'}
+        
+        # Handle credits if present (take max to be safe)
+        credits_col = None
+        for col in features_data.columns:
+            if col.lower() == 'credits':
+                credits_col = col
+                break
+        
+        if credits_col:
+            agg_dict[credits_col] = 'max'
+            
+        # Perform aggregation
+        try:
+            features_data = features_data.groupby(group_cols, as_index=False).agg(agg_dict)
+            print(f"Data after aggregation: {features_data.shape}")
+        except Exception as e:
+            print(f"Warning: Aggregation failed ({e}). Using unaggregated data.")
+        
         print(f"Target statistics:")
         print(features_data[self.target_column].describe())
         
@@ -79,7 +112,8 @@ class FeatureEngineer:
         """Select appropriate features based on the schema type."""
         
         # Define specific features we want to use for enrollment prediction
-        desired_features = ['term', 'subj', 'crse', 'sec', 'credits']
+        # Note: 'sec' (Section) is excluded as we predict at the Course level
+        desired_features = ['term', 'subj', 'crse', 'credits']
         
         if self.feature_schema == "min":
             # Find the available desired features in our dataset

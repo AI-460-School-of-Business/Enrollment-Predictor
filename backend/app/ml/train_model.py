@@ -147,6 +147,27 @@ def main():
         results = predictor.train(X, y)
         
         print(f"\n=== Training Complete ===")
+
+        # If per-course accuracy was computed, report average MAPE excluding bottom 10 courses
+        try:
+            per_course = results.get('per_course_accuracy')
+            if per_course is not None and hasattr(per_course, 'shape') and per_course.shape[0] > 0:
+                # per_course is expected to be a DataFrame sorted by 'mape' ascending
+                total_courses = len(per_course)
+                if total_courses > 10:
+                    trimmed = per_course.iloc[:-10]  # remove bottom 10 (highest MAPE)
+                    trimmed_count = len(trimmed)
+                else:
+                    trimmed = per_course
+                    trimmed_count = len(trimmed)
+
+                # Compute mean MAPE ignoring possible NaN values
+                mean_mape = float(trimmed['mape'].dropna().mean()) if trimmed_count > 0 else float('nan')
+                print(f"\nAverage per-course MAPE (excluding bottom 10): {mean_mape:.2f}%\n  Based on {trimmed_count} courses out of {total_courses} total")
+
+        except Exception:
+            # Don't fail training just because of this reporting step
+            pass
         
         # Prompt to save
         save_model = input("\nWould you like to save this model? (y/n): ").strip().lower()
