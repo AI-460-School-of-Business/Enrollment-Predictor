@@ -94,7 +94,7 @@ function SemesterSelector({
 
   return (
     <div className="space-y-2">
-      <label className="text-sm">Semesters</label>
+      <label className="text-sm">Select Training Semesters</label>
       <Popover>
         <PopoverTrigger asChild>
           <Button
@@ -107,11 +107,6 @@ function SemesterSelector({
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-64 p-4" align="start">
-          {error && (
-            <div className="text-xs text-red-600 mb-2">
-              Failed to load semesters.
-            </div>
-          )}
           <div className="space-y-2 max-h-64 overflow-y-auto">
             {allSemesters.map((semester) => (
               <div key={semester.term} className="flex items-center space-x-2">
@@ -480,24 +475,6 @@ export default function App() {
                         )}
                     </SelectContent>
                   </Select>
-                  {departmentsError && (
-                    <p className="text-xs text-red-600 mt-1">
-                      Failed to load departments.
-                    </p>
-                  )}
-                </div>
-
- 
-                {/* Course Identifier Filter */}
-                <div className="space-y-2">
-                  <label className="text-sm">Filter by Course Identifier</label>
-                  <Input
-                    type="text"
-                    placeholder="Enter course identifier"
-                    value={crnFilter}
-                    onChange={(e) => setCrnFilter(e.target.value)}
-                    className="border-gray-300 hover:border-[#94BAEB] focus:border-[#194678]"
-                  />
                 </div>
               </div>
  
@@ -588,13 +565,13 @@ export default function App() {
                     <div className="bg-[#C2D8FF]/20 rounded-md p-4 space-y-3">
                       {/* Feature Description */}
                       <div className="py-2">
-                        <p className="text-md mb-1">Feature Description</p>
+                        <p className="text-md mb-1">Feature Description:</p>
                         <p className="text-sm">Text here...</p>
                       </div>
                       {/* Required Fields */}
                       <div className="py-2">
-                        <p className="text-md mb-1">Required Fields</p>
-                        <p className="text-sm">Text here...</p>
+                        <p className="text-md mb-1">Required Fields:</p>
+                        <p className="text-sm">Term, Term Desc, CRN, Subj, Crse, Sec, Credits, Title, Act, XL Act</p>
                       </div>
                     </div>
                   </div>
