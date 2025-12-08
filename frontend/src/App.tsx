@@ -388,7 +388,7 @@ export default function App() {
                 style={{ fontSize: "2rem", fontWeight: 700 }}>
                 Course Sense
               </div>
-              <p className="text-[#194678]/70 text-lg font-medium">Enrollment Predictor</p>
+              <p className="text-[#194678]/70 text-lg font-medium">Enrollment Forcaster</p>
             </div>
           </div>
 
