@@ -236,7 +236,6 @@ def get_departments():
         if conn:
             conn.close()
 
-
 # Prediction Logic (SQL → Model)
 def sql_predict(payload):
     """
@@ -262,7 +261,7 @@ def sql_predict(payload):
     model_path = payload.get("model_path")
     model_filename = payload.get("model_filename")
     model_prefix = payload.get("model_prefix")
-    model_dir = payload.get("model_dir", "/app/data/prediction_models")
+    model_dir = payload.get("model_dir", "backend/data/prediction_models")
     features = payload.get("features", "min")
     
     # Determine model path
