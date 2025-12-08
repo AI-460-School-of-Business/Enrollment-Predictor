@@ -32,16 +32,16 @@ def main():
     parser.epilog = textwrap.dedent("""
     Examples:
       # Predict for a single course
-      python server/ml/predict.py --single --subj FIN --crse 400 --term 202640
+      python backend/app/ml/predict.py --single --subj FIN --crse 400 --term 202640
       
       # Predict for courses using a SQL query
-      python server/ml/predict.py --sql "SELECT term, subj, crse FROM section_detail_report_sbussection_detail_report_sbus WHERE subj='MIS' AND term=202540"
+      docker-compose exec web python backend/app/ml/predict.py --sql "SELECT term, subj, crse FROM section_detail_report_sbussection_detail_report_sbus WHERE subj='MIS' AND term=202540"
     """)
     
     args = parser.parse_args()
     
     # Resolve model path
-    model_dir = "/app/data/prediction_models"
+    model_dir = "/backend/data/prediction_models"
     if args.model:
         model_path = args.model
     else:

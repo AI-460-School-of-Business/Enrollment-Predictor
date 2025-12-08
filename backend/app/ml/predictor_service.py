@@ -24,7 +24,7 @@ from glob import glob
 
 
 # Default model to use when none provided / found in MODEL_DIR
-DEFAULT_MODEL_PATH = "/app/data/prediction_models/enrollment_tree_min_20251202_234630.pkl"
+DEFAULT_MODEL_PATH = "backend/data/prediction_models/enrollment_tree_min_20251203_185724.pkl"
 
 
 def load_saved_model(model_path: str) -> Tuple[Any, Optional[List[str]], Optional[Any], Optional[Dict]]:
