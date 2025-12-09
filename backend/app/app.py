@@ -10,6 +10,8 @@ import numpy as np
 from pathlib import Path
 from datetime import datetime
 import json
+from ml.predictor_service import predict_with_model, _choose_model_path
+
 
 def _to_native(obj):
     """Recursively convert numpy/pandas scalar/arrays to native Python types."""
@@ -239,8 +241,8 @@ def get_departments():
 # Prediction Logic (SQL → Model)
 def sql_predict(payload):
     """
-    Execute SQL query, load model, and make predictions.
-    
+    Execute SQL query, load/choose model, and make predictions using predict_with_model.
+
     Args:
         payload (dict): Request payload containing:
             - sql (str): SQL query to execute
@@ -249,95 +251,88 @@ def sql_predict(payload):
             - model_prefix (str, optional): Prefix to find latest model
             - model_dir (str, optional): Directory containing models
             - features (str, optional): Feature schema to use (default: "min")
-    
+
     Returns:
-        list: Prediction results
+        list: Prediction results (each item includes index, prediction, and original row columns)
     """
     # Extract parameters
     sql_query = payload.get("sql")
     if not sql_query:
         raise ValueError("Missing required parameter: sql")
-    
+
     model_path = payload.get("model_path")
     model_filename = payload.get("model_filename")
     model_prefix = payload.get("model_prefix")
     model_dir = payload.get("model_dir", "backend/data/prediction_models")
     features = payload.get("features", "min")
-    
+
     # Determine model path
     if model_path:
-        # Use direct path
+        # use as given
         pass
     elif model_filename:
-        # Use filename in model_dir
         model_path = os.path.join(model_dir, model_filename)
-    elif model_prefix:
-        # Find latest model matching prefix
-        model_path = find_latest_model(model_dir, model_prefix)
     else:
-        # Default: find latest model with default prefix
-        model_path = find_latest_model(model_dir, f"enrollment_tree_{features}_")
-    
-    # Load the model
-    model_data = load_model(model_path)
-    
-    # Verify feature schema matches
-    if model_data.get("feature_schema") != features:
-        raise ValueError(
-            f"Model feature schema '{model_data.get('feature_schema')}' "
-            f"does not match requested features '{features}'"
-        )
-    
+        # Use _choose_model_path helper to pick latest model (respecting provided prefix if any)
+        chooser_payload = {"model_dir": model_dir}
+        if model_prefix:
+            chooser_payload["model_prefix"] = model_prefix
+        else:
+            chooser_payload["model_prefix"] = f"enrollment_tree_{features}_"
+        try:
+            model_path = _choose_model_path(chooser_payload)
+        except Exception as e:
+            raise ValueError(f"Error finding model: {e}")
+
     # Execute SQL query
     conn = get_db_connection()
     try:
         df = pd.read_sql_query(sql_query, conn)
     finally:
         conn.close()
-    
+
     if df.empty:
         return []
-    
-    # Extract and prepare features
-    feature_columns = model_data["feature_columns"]
-    
-    # Verify all required columns are present
-    missing_cols = [col for col in feature_columns if col not in df.columns]
-    if missing_cols:
-        raise ValueError(f"Missing required columns in query result: {missing_cols}")
-    
-    # Prepare features
-    X = df[feature_columns].copy()
-    
-    # Apply label encoding for categorical columns
-    label_encoders = model_data["label_encoders"]
-    for col, encoder in label_encoders.items():
-        if col in X.columns:
-            # Handle unknown categories by using a default value
-            X[col] = X[col].apply(
-                lambda x: encoder.transform([x])[0] if x in encoder.classes_ else -1
-            )
-    
-    # Scale features
-    scaler = model_data["scaler"]
-    X_scaled = scaler.transform(X)
-    
-    # Make predictions
-    model = model_data["model"]
-    predictions = model.predict(X_scaled)
-    
-    # Prepare results
+
+    # Normalize columns to lowercase (match predict.py behavior)
+    df.columns = [c.lower() for c in df.columns]
+
+    # Ensure required defaults match CLI behavior in predict.py
+    if 'act' not in df.columns:
+        df['act'] = 0
+    if 'credits' not in df.columns:
+        df['credits'] = 3
+
+    # Convert rows to the list-of-dicts shape expected by predict_with_model
+    rows = df.to_dict(orient='records')
+
+    # Delegate loading, feature engineering, encoding, scaling, prediction to predict_with_model
+    result = predict_with_model(model_path, rows, features=features)
+
+    # predict_with_model is expected to return a dict with at least:
+    #  - 'predictions': sequence of prediction values (aligned with 'features' returned)
+    #  - optionally 'features' or other metadata
+    predictions = result.get('predictions', [])
+    if predictions is None:
+        predictions = []
+
+    # Prepare output list similar to the original function: include index, prediction, and original row data
     results = []
     for idx, pred in enumerate(predictions):
-        result = {
+        res = {
             "index": int(idx),
             "prediction": float(pred),
         }
-        # Include original row data for context
+        # include original row columns for context
         for col in df.columns:
-            result[col] = df.iloc[idx][col].item() if hasattr(df.iloc[idx][col], 'item') else df.iloc[idx][col]
-        results.append(result)
-    
+            val = df.iloc[idx][col]
+            try:
+                # convert numpy scalars to python primitives when possible
+                res[col] = val.item() if hasattr(val, "item") else val
+            except Exception:
+                res[col] = val
+        results.append(res)
+
     return results
 
 @app.route("/api/hello")

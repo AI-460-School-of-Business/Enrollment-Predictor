@@ -16,7 +16,7 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 import pandas as pd
 
-from data.feature_engineer import FeatureEngineer
+from ml.data.feature_engineer import FeatureEngineer
 from utils.db_config import DB_CONFIG
 import psycopg2
 import os
@@ -24,8 +24,7 @@ from glob import glob
 
 
 # Default model to use when none provided / found in MODEL_DIR
-DEFAULT_MODEL_PATH = "backend/data/prediction_models/enrollment_tree_min_20251203_185724.pkl"
-
+DEFAULT_MODEL_PATH = "backend/data/prediction_models/enrollment_tree_min_20251209_181054.pkl"
 
 def load_saved_model(model_path: str) -> Tuple[Any, Optional[List[str]], Optional[Any], Optional[Dict]]:
     """Load a pickled model from disk.
@@ -190,7 +189,7 @@ def _choose_model_path(payload: Dict) -> str:
       4. newest .pkl in model_dir
     """
     model_path = payload.get("model_path")
-    model_dir = Path(payload.get("model_dir") or os.getenv("MODEL_DIR") or "/backend/data/prediction_models")
+    model_dir = Path(payload.get("model_dir") or os.getenv("MODEL_DIR") or "backend/data/prediction_models")
 
     if model_path:
         return str(Path(model_path))
@@ -215,143 +214,27 @@ def _choose_model_path(payload: Dict) -> str:
 
     raise FileNotFoundError(f"No model files found in {model_dir} and default model not present: {DEFAULT_MODEL_PATH}")
 
-def read_prediction_models(model_dir: Optional[str] = None, pattern: str = "*.pkl") -> List[Dict[str, str]]:
-        """Return available prediction model files.
- 
-        Args:
-            - model_dir: optional path to search. If not provided the function will
-                consult the `MODEL_DIR` environment variable and finally fall back to
-                the repository's `backend/data/prediction_models` directory which is
-                convenient for local development.
-            - pattern: glob pattern to match files (default: "*.pkl").
- 
-        Returns a list of dicts with keys `name` and `path`, ordered newest-first.
-        """
-        model_dir = Path(model_dir or os.getenv("MODEL_DIR") or "/workspaces/Enrollment-Predictor/backend/data/prediction_models")
- 
-        if not model_dir.exists():
-                return []
- 
-        files = sorted(model_dir.glob(pattern), key=lambda p: p.stat().st_mtime, reverse=True)
- 
-        return [{"name": p.name, "path": str(p)} for p in files]
 
-def sql_predict(payload):
+def sql_predict(payload: Dict) -> Dict[str, Any]:
+    """Run a SQL query from the payload, convert results to raw rows, choose a model, and predict.
+
+    Expected payload keys (JSON):
+      - sql: required, SQL string to select course rows
+      - model_path | model_filename | model_prefix: optional to select model
+      - features: optional, 'min' (default) or 'rich'
+
+    Returns the same shape as `predict_with_model`.
     """
-    Execute SQL query, load model, and make predictions.
-    
-    Args:
-        payload (dict): Request payload containing:
-            - sql (str): SQL query to execute
-            - model_path (str, optional): Direct path to model file
-            - model_filename (str, optional): Model filename in model_dir
-            - model_prefix (str, optional): Prefix to find latest model
-            - model_dir (str, optional): Directory containing models
-            - features (str, optional): Feature schema to use (default: "min")
-    
-    Returns:
-        list: Prediction results
-    """
-    # Extract parameters
-    sql_query = payload.get("sql")
-    if not sql_query:
-        raise ValueError("Missing required parameter: sql")
-    
-    model_path = payload.get("model_path")
-    model_filename = payload.get("model_filename")
-    model_prefix = payload.get("model_prefix")
-    model_dir = payload.get("model_dir", "backend/data/prediction_models")
+    sql = payload.get("sql")
+    if not sql:
+        raise ValueError("Payload must include 'sql' with the SELECT statement to retrieve courses")
+
+    # Execute SQL and get rows
+    df = run_sql_query(sql)
+    rows = df.to_dict(orient="records")
+
+    # Choose model
+    model_path = _choose_model_path(payload)
     features = payload.get("features", "min")
-    
-    # Determine model path
-    if model_path:
-        # Use direct path
-        pass
-    elif model_filename:
-        # Use filename in model_dir
-        model_path = os.path.join(model_dir, model_filename)
-    elif model_prefix:
-        # Find latest model matching prefix
-        model_path = find_latest_model(model_dir, model_prefix)
-    else:
-        # Default: find latest model with default prefix
-        model_path = find_latest_model(model_dir, f"enrollment_tree_{features}_")
-    
-    # Load the model using shared loader (returns estimator and feature columns)
-    model_obj, saved_feature_cols = load_saved_model(model_path)
 
-    # Also inspect the raw pickle to retrieve auxiliary metadata if present
-    with open(model_path, 'rb') as f:
-        raw_saved = pickle.load(f)
-
-    # If the raw saved object is a dict, prefer its metadata keys
-    if isinstance(raw_saved, dict):
-        model_data = raw_saved
-    else:
-        # Construct a minimal metadata dict from available attributes
-        model_data = {
-            "model": model_obj,
-            "feature_columns": saved_feature_cols or getattr(model_obj, "feature_columns", None),
-            "feature_schema": getattr(raw_saved, "feature_schema", None) or getattr(model_obj, "feature_schema", None),
-            "label_encoders": getattr(raw_saved, "label_encoders", None) or getattr(model_obj, "label_encoders", None),
-            "scaler": getattr(raw_saved, "scaler", None) or getattr(model_obj, "scaler", None),
-        }
-
-    # Verify feature schema matches when available
-    if model_data.get("feature_schema") is not None and model_data.get("feature_schema") != features:
-        raise ValueError(
-            f"Model feature schema '{model_data.get('feature_schema')}' "
-            f"does not match requested features '{features}'"
-        )
-
-    # Execute SQL query
-    conn = get_db_connection()
-    try:
-        df = pd.read_sql_query(sql_query, conn)
-    finally:
-        conn.close()
-    
-    if df.empty:
-        return []
-    
-    # Extract and prepare features
-    feature_columns = model_data["feature_columns"]
-    
-    # Verify all required columns are present
-    missing_cols = [col for col in feature_columns if col not in df.columns]
-    if missing_cols:
-        raise ValueError(f"Missing required columns in query result: {missing_cols}")
-    
-    # Prepare features
-    X = df[feature_columns].copy()
-    
-    # Apply label encoding for categorical columns
-    label_encoders = model_data["label_encoders"]
-    for col, encoder in label_encoders.items():
-        if col in X.columns:
-            # Handle unknown categories by using a default value
-            X[col] = X[col].apply(
-                lambda x: encoder.transform([x])[0] if x in encoder.classes_ else -1
-            )
-    
-    # Scale features
-    scaler = model_data["scaler"]
-    X_scaled = scaler.transform(X)
-    
-    # Make predictions
-    model = model_data["model"]
-    predictions = model.predict(X_scaled)
-    
-    # Prepare results
-    results = []
-    for idx, pred in enumerate(predictions):
-        result = {
-            "index": int(idx),
-            "prediction": float(pred),
-        }
-        # Include original row data for context
-        for col in df.columns:
-            result[col] = df.iloc[idx][col].item() if hasattr(df.iloc[idx][col], 'item') else df.iloc[idx][col]
-        results.append(result)
-    
-    return results
+    return predict_with_model(model_path, rows, features)
