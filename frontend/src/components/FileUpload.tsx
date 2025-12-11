@@ -10,7 +10,7 @@ import {
 interface FileUploadProps {
   label: string;
   onFileChange: (files: File[]) => void;
-  expectedHeaders: string[];
+  description?: string;
   /** Allowed file extensions, e.g. [".csv", ".xlsx"] */
   acceptedExtensions: string[];
 }
@@ -20,7 +20,7 @@ type UploadStatus = "idle" | "success" | "error";
 export function FileUpload({
   label,
   onFileChange,
-  expectedHeaders,
+  description,
   acceptedExtensions,
 }: FileUploadProps) {
   const [files, setFiles] = useState<File[]>([]);
@@ -40,7 +40,7 @@ export function FileUpload({
     );
 
   const autoClearVisualState = () => {
-    // Only clear the visual status (border/fill), keep error text
+    // Clear the visual state (green/red border/fill), keep any error text
     setTimeout(() => {
       setUploadStatus("idle");
       setIsDragging(false);
@@ -126,31 +126,26 @@ export function FileUpload({
 
   return (
     <div className="space-y-2">
-      {/* Label + tooltip */}
+      {/* Label + optional tooltip */}
       <div className="flex items-center gap-2">
         <label className="text-sm">{label}</label>
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                type="button"
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <Info className="w-4 h-4" />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <div className="text-sm">
-                <p className="mb-1">Expected headers:</p>
-                <ul className="list-disc list-inside">
-                  {expectedHeaders.map((h, i) => (
-                    <li key={i}>{h}</li>
-                  ))}
-                </ul>
-              </div>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        {description && (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <Info className="w-4 h-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <div className="text-sm max-w-xs">{description}</div>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
       </div>
 
       {/* Dropzone */}

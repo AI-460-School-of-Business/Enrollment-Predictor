@@ -460,18 +460,8 @@ export default function App() {
                 <FileUpload
                   label="Data Upload"
                   onFileChange={setFiles1}
-                  expectedHeaders={[
-                    "Term",
-                    "Term Desc",
-                    "CRN",
-                    "Subj",
-                    "Crse",
-                    "Sec",
-                    "Credits",
-                    "Title",
-                    "Act",
-                    "XL Act",
-                  ]}
+                  description=
+                    "Upload .pkl file."
                   acceptedExtensions={[".pkl"]}
                 />
               </div>
@@ -651,18 +641,8 @@ export default function App() {
                   <FileUpload
                     label="Upload Training Data"
                     onFileChange={setTrainingFile}
-                    expectedHeaders={[
-                      "Term",
-                      "Term Desc",
-                      "CRN",
-                      "Subj",
-                      "Crse",
-                      "Sec",
-                      "Credits",
-                      "Title",
-                      "Act",
-                      "XL Act",
-                    ]}
+                    description=
+                      "Term, Term Desc, CRN, Subj, Crse, Sec, Credits, Title, Act, XL Act"
                     acceptedExtensions={[".csv", ".xlsx"]}
                   />
                 </div>
