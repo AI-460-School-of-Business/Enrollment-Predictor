@@ -1,7 +1,7 @@
 """Feature engineering and preparation."""
 from typing import Dict, List, Tuple
 import pandas as pd
-from data.data_loader import DataLoader
+from .data_loader import DataLoader
 
 
 class FeatureEngineer:

@@ -17,7 +17,7 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 import pandas as pd
 
 from ml.data.feature_engineer import FeatureEngineer
-from utils.db_config import DB_CONFIG
+from ml.utils.db_config import DB_CONFIG
 import psycopg2
 import os
 from glob import glob
