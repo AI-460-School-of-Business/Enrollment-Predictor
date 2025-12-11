@@ -83,6 +83,20 @@ function SemesterSelector({
     }
   };
 
+  // convenience values
+  const totalCount = allSemesters.length;
+  const selectedCount = selectedSemesters.length;
+  const allSelected = totalCount > 0 && selectedCount === totalCount;
+  const partiallySelected = selectedCount > 0 && selectedCount < totalCount;
+
+  const toggleSelectAll = () => {
+    if (allSelected) {
+      onSelectionChange([]); // clear all
+    } else {
+      onSelectionChange(allSemesters.map((s) => s.term_desc)); // select all
+    }
+  };
+
   const buttonLabel = (() => {
     if (isLoading) return "Loading semesters...";
     if (error) return "Error loading semesters";
@@ -106,8 +120,28 @@ function SemesterSelector({
             <ChevronDown className="w-4 h-4 opacity-50" />
           </Button>
         </PopoverTrigger>
+
         <PopoverContent className="w-64 p-4" align="start">
           <div className="space-y-2 max-h-64 overflow-y-auto">
+            {/* Select all row */}
+            <div className="flex items-center space-x-2 border-b pb-2 mb-2">
+              <Checkbox
+                id="select-all-semesters"
+                checked={allSelected}
+                onCheckedChange={toggleSelectAll}
+              />
+              <label
+                htmlFor="select-all-semesters"
+                className="text-sm cursor-pointer flex-1"
+              >
+                {allSelected
+                  ? `All selected (${totalCount})`
+                  : partiallySelected
+                  ? `${selectedCount} of ${totalCount} selected`
+                  : "Select all"}
+              </label>
+            </div>
+
             {allSemesters.map((semester) => (
               <div key={semester.term} className="flex items-center space-x-2">
                 <Checkbox
@@ -123,6 +157,7 @@ function SemesterSelector({
                 </label>
               </div>
             ))}
+
             {!isLoading && !error && allSemesters.length === 0 && (
               <div className="text-xs text-gray-500">No semesters found.</div>
             )}
@@ -642,4 +677,3 @@ export default function App() {
     </div>
   );
 }
- 
