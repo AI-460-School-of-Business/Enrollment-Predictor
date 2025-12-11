@@ -11,6 +11,8 @@ interface FileUploadProps {
   label: string;
   onFileChange: (files: File[]) => void;
   expectedHeaders: string[];
+  /** Allowed file extensions, e.g. [".csv", ".xlsx"] */
+  acceptedExtensions: string[];
 }
 
 type UploadStatus = "idle" | "success" | "error";
@@ -19,20 +21,29 @@ export function FileUpload({
   label,
   onFileChange,
   expectedHeaders,
+  acceptedExtensions,
 }: FileUploadProps) {
   const [files, setFiles] = useState<File[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [uploadStatus, setUploadStatus] = useState<UploadStatus>("idle");
 
+  // Normalize extensions: ensure they start with "." and are lowercase
+  const normalizedExtensions = acceptedExtensions.map((ext) => {
+    const trimmed = ext.trim().toLowerCase();
+    return trimmed.startsWith(".") ? trimmed : `.${trimmed}`;
+  });
+
   const isValidFile = (file: File) =>
-    file.name.toLowerCase().endsWith(".csv") ||
-    file.name.toLowerCase().endsWith(".xlsx");
+    normalizedExtensions.some((ext) =>
+      file.name.toLowerCase().endsWith(ext)
+    );
 
   const autoClearVisualState = () => {
+    // Only clear the visual status (border/fill), keep error text
     setTimeout(() => {
       setUploadStatus("idle");
-      setErrorMessage(null);
+      setIsDragging(false);
     }, 1000);
   };
 
@@ -44,26 +55,24 @@ export function FileUpload({
     // SUCCESS
     if (validFiles.length > 0) {
       setUploadStatus("success");
-      setErrorMessage(null);
-
-      autoClearVisualState(); // success fades after x seconds
+      setErrorMessage(null); // clear any previous error
+      autoClearVisualState();
     }
 
-    // ERROR
-    else if (invalidFiles.length > 0) {
+    // ERROR (no valid files, at least one invalid)
+    if (validFiles.length === 0 && invalidFiles.length > 0) {
       const invalidNames = invalidFiles.map((f) => f.name).join(", ");
-
       setUploadStatus("error");
       setErrorMessage(
-        `Invalid file type: ${invalidNames}. Only .csv or .xlsx files are allowed.`
+        `Invalid file type: ${invalidNames}. Only ${normalizedExtensions.join(
+          ", "
+        )} files are allowed.`
       );
-
-      autoClearVisualState(); // error clears after x seconds
-
+      autoClearVisualState(); // flash red, error text stays
       return;
     }
 
-    // Merge valid files without duplicates
+    // Merge valid files without duplicates by name
     const existing = new Set(files.map((f) => f.name));
     const merged = [
       ...files,
@@ -99,7 +108,10 @@ export function FileUpload({
     setErrorMessage(null);
   };
 
-  // Inline background + border (can't be overridden by index.css)
+  // Build accept string for <input>, e.g. ".csv,.xlsx"
+  const acceptAttr = normalizedExtensions.join(",");
+
+  // Inline background + border
   const dropzoneStyle: React.CSSProperties = {};
 
   if (uploadStatus === "success") {
@@ -159,7 +171,7 @@ export function FileUpload({
         <input
           type="file"
           multiple
-          accept=".csv,.xlsx"
+          accept={acceptAttr}
           className="hidden"
           id={`file-input-${label}`}
           onChange={handleFileInput}
@@ -171,7 +183,7 @@ export function FileUpload({
             <span className="text-[#194678] underline">browse files</span>
           </p>
           <p className="text-xs text-gray-400 mt-1">
-            .csv or .xlsx (multiple allowed)
+            Accepted: {normalizedExtensions.join(", ")} (multiple allowed)
           </p>
         </label>
       </div>
@@ -191,7 +203,7 @@ export function FileUpload({
         </div>
       )}
 
-      {/* Error message (auto-clears after 2s) */}
+      {/* Error message (stays until valid upload) */}
       {errorMessage && (
         <p className="text-xs text-red-600 mt-1">{errorMessage}</p>
       )}

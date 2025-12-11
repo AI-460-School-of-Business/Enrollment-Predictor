@@ -472,6 +472,7 @@ export default function App() {
                     "Act",
                     "XL Act",
                   ]}
+                  acceptedExtensions={[".pkl"]}
                 />
               </div>
  
@@ -651,12 +652,18 @@ export default function App() {
                     label="Upload Training Data"
                     onFileChange={setTrainingFile}
                     expectedHeaders={[
-                      "Course ID",
-                      "Semester",
-                      "Enrollment",
-                      "Department",
-                      "Instructor",
+                      "Term",
+                      "Term Desc",
+                      "CRN",
+                      "Subj",
+                      "Crse",
+                      "Sec",
+                      "Credits",
+                      "Title",
+                      "Act",
+                      "XL Act",
                     ]}
+                    acceptedExtensions={[".csv", ".xlsx"]}
                   />
                 </div>
 
