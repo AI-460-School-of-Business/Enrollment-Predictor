@@ -463,6 +463,7 @@ export default function App() {
                   description=
                     "Upload .pkl file."
                   acceptedExtensions={[".pkl"]}
+                  limitUpload={true}
                 />
               </div>
  
@@ -644,6 +645,7 @@ export default function App() {
                     description=
                       "Term, Term Desc, CRN, Subj, Crse, Sec, Credits, Title, Act, XL Act"
                     acceptedExtensions={[".csv", ".xlsx"]}
+                    limitUpload={false}
                   />
                 </div>
 

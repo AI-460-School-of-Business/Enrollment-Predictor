@@ -13,6 +13,8 @@ interface FileUploadProps {
   description?: string;
   /** Allowed file extensions, e.g. [".csv", ".xlsx"] */
   acceptedExtensions: string[];
+  /** If true, only one file may be uploaded at a time */
+  limitUpload?: boolean;
 }
 
 type UploadStatus = "idle" | "success" | "error";
@@ -22,6 +24,7 @@ export function FileUpload({
   onFileChange,
   description,
   acceptedExtensions,
+  limitUpload = false,
 }: FileUploadProps) {
   const [files, setFiles] = useState<File[]>([]);
   const [isDragging, setIsDragging] = useState(false);
@@ -49,17 +52,26 @@ export function FileUpload({
 
   const addFiles = (incoming: FileList | File[]) => {
     const incomingArray = Array.from(incoming);
+
+    // Reject multi-file drop when limitUpload === true ---
+    if (limitUpload && incomingArray.length > 1) {
+      setUploadStatus("error");
+      setErrorMessage("Only one file may be uploaded at a time.");
+      autoClearVisualState();
+      return;
+    }
+
     const validFiles = incomingArray.filter(isValidFile);
     const invalidFiles = incomingArray.filter((f) => !isValidFile(f));
 
     // SUCCESS
     if (validFiles.length > 0) {
       setUploadStatus("success");
-      setErrorMessage(null); // clear any previous error
+      setErrorMessage(null);
       autoClearVisualState();
     }
 
-    // ERROR (no valid files, at least one invalid)
+    // ERROR: invalid files only
     if (validFiles.length === 0 && invalidFiles.length > 0) {
       const invalidNames = invalidFiles.map((f) => f.name).join(", ");
       setUploadStatus("error");
@@ -68,11 +80,20 @@ export function FileUpload({
           ", "
         )} files are allowed.`
       );
-      autoClearVisualState(); // flash red, error text stays
+      autoClearVisualState();
       return;
     }
 
-    // Merge valid files without duplicates by name
+    // LIMIT UPLOAD MODE — allow only one file & replace previous
+    if (limitUpload) {
+      const single = validFiles[0];
+      if (!single) return;
+      setFiles([single]);
+      onFileChange([single]);
+      return;
+    }
+
+    // MULTI-FILE MODE — merge, avoid duplicates
     const existing = new Set(files.map((f) => f.name));
     const merged = [
       ...files,
@@ -82,6 +103,7 @@ export function FileUpload({
     setFiles(merged);
     onFileChange(merged);
   };
+
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -165,7 +187,7 @@ export function FileUpload({
       >
         <input
           type="file"
-          multiple
+          multiple={!limitUpload}
           accept={acceptAttr}
           className="hidden"
           id={`file-input-${label}`}
@@ -178,7 +200,8 @@ export function FileUpload({
             <span className="text-[#194678] underline">browse files</span>
           </p>
           <p className="text-xs text-gray-400 mt-1">
-            Accepted: {normalizedExtensions.join(", ")} (multiple allowed)
+            Accepted: {normalizedExtensions.join(", ")}{" "}
+            {limitUpload ? "(single file)" : "(multiple allowed)"}
           </p>
         </label>
       </div>
