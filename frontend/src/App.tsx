@@ -407,10 +407,10 @@ export default function App() {
         <div className="w-full mb-6 flex items-center justify-between gap-8">
           
           {/* Logo */}
-          <div className="w-64 h-64 flex items-center justify-center">
+          <div className="w-64 h-64 flex items-center justify-start">
             <img
-              className="h-64 w-64 object-contain"
-              src="SOBblue.png"
+              className="object-contain"
+              src="CCSU_Logo.svg"
               alt="SOB Logo"
             />
           </div>
@@ -419,11 +419,11 @@ export default function App() {
           <div className="w-64 h-64 flex items-center justify-center">
             <div className="text-center">
               <div
-                className="text-[#194678] mb-1"
-                style={{ fontSize: "2rem", fontWeight: 700 }}>
+                className="text-[#194678]"
+                style={{ fontSize: "2rem", fontWeight: 800 }}>
                 Course Sense
               </div>
-              <p className="text-[#194678]/70 text-lg font-medium">Enrollment Forcaster</p>
+              <p className="text-[#194678]/70 text-lg font-medium">Enrollment Forecaster</p>
             </div>
           </div>
 
