@@ -33,7 +33,6 @@ import {
   ArrowDown,
   ChevronDown,
 } from "lucide-react";
-
  
 interface ResultData {
   id: string;
@@ -188,6 +187,9 @@ export default function App() {
   const [isLoadingDepartments, setIsLoadingDepartments] = useState(false);
   const [departmentsError, setDepartmentsError] = useState<string | null>(null);
 
+  // Prediction term (term to predict enrollment for) - default 202640
+  const [predictionTerm, setPredictionTerm] = useState<number>(202640);
+
   const [results, setResults] = useState<ResultData[]>([]);
   const [columns, setColumns] = useState<string[]>([]);
   const [rawResponse, setRawResponse] = useState<any>(null);
@@ -267,26 +269,50 @@ export default function App() {
 
  
   const handleGenerateReport = async () => {
-    // Temporary logging of selected semesters
     console.log("Selected semesters:", selectedSemesters);
-    console.log("Selected department:", departmentFilter || "(none)"); 
+    console.log("Selected department:", departmentFilter || "(none)");
+    console.log("Prediction term:", predictionTerm);
 
     setIsLoading(true);
     setError(null);
  
     try {
-      // For testing: request all rows
-      const sql = `SELECT * FROM section_detail_report_sbussection_detail_report_sbus;`;
- 
-      // Encode SQL into query string and call the backend /sql GET endpoint
-      const url = `${API_BASE_URL}/sql?sql=${encodeURIComponent(sql)}`;
-      const response = await fetch(url, { method: "GET" });
+      // Build aggregated SQL query for predictions
+      // Group by term, subj, crse and sum enrollment across sections
+      let sql = `
+        SELECT term, subj, crse, SUM(act) as act, AVG(credits) as credits 
+        FROM section_detail_report_sbussection_detail_report_sbus
+        WHERE term = ${predictionTerm}
+      `;
+
+      // Apply department filter if selected
+      if (departmentFilter) {
+        sql += ` AND subj = '${departmentFilter}'`;
+      }
+
+      sql += ` GROUP BY term, subj, crse`;
+      sql += ` LIMIT 200`; // safety limit
+
+      console.log("Generated SQL:", sql);
+
+      // Build prediction payload
+      const payload = {
+        sql: sql,
+        model_prefix: "enrollment_tree_min_",
+        features: "min"
+      };
+
+      // Call prediction endpoint
+      const response = await fetch(`${API_BASE_URL}/api/predict/sql`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
  
       if (!response.ok) {
         throw new Error(`Server responded with status ${response.status}`);
       }
  
-      // Read raw text and parse JSON so we can both print raw response and use parsed data
       const text = await response.text();
       console.log("Raw response text:", text);
       setRawText(text);
@@ -299,24 +325,27 @@ export default function App() {
         throw new Error("Backend did not return valid JSON");
       }
  
-      console.log("Parsed backend JSON:", json);
+      console.log("Parsed prediction response:", json);
       setRawResponse(json);
  
-      if (!json.ok) {
-        throw new Error(json.error || "Backend returned ok=false");
+      if (json.error) {
+        throw new Error(json.error);
       }
- 
-      const rows = (json.rows ?? []) as any[];
- 
-      // For now: extract column names and print them. Do not map rows to ResultData.
+
+      // json is an array of prediction results
+      // Each item has: { index, prediction, term, subj, crse, act, credits }
+      const rows = Array.isArray(json) ? json : [];
+      
       const cols = rows.length > 0 ? Object.keys(rows[0]) : [];
       console.log("Columns:", cols);
+      console.log("Predictions count:", rows.length);
+      
       setColumns(cols);
       setResults([]);
       setSelectedRows(new Set());
       setShowResults(true);
     } catch (err) {
-      console.error("Error generating report:", err);
+      console.error("Error generating predictions:", err);
       setError(err instanceof Error ? err.message : "An unknown error occurred.");
       setShowResults(false);
     } finally {

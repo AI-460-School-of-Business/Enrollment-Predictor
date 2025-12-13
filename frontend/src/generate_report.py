@@ -27,7 +27,6 @@ except ImportError:
     print("Error: psycopg2 not installed. Run: pip install psycopg2-binary")
     sys.exit(1)
 
-
 # Database configuration
 DB_CONFIG = {
     "host": os.getenv("DB_HOST", "localhost"),
@@ -37,7 +36,6 @@ DB_CONFIG = {
     "database": os.getenv("POSTGRES_DB", "postgres"),
 }
 
-
 def get_db_connection():
     """Create database connection."""
     try:
@@ -45,7 +43,6 @@ def get_db_connection():
     except psycopg2.Error as e:
         print(f"Database connection error: {e}")
         sys.exit(1)
-
 
 def get_course_identifiers(custom_query: Optional[str] = None) -> pd.DataFrame:
     """
