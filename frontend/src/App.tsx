@@ -33,7 +33,7 @@ import {
   ArrowDown,
   ChevronDown,
 } from "lucide-react";
- 
+
 interface ResultData {
   id: string;
   confidenceLevel: number;
@@ -41,7 +41,7 @@ interface ResultData {
   courseNumber: string;
   courseTitle: string;
 }
- 
+
 type SortColumn =
   | "confidenceLevel"
   | "seatsNeeded"
@@ -166,11 +166,11 @@ function SemesterSelector({
     </div>
   );
 }
- 
+
 // For Docker, set VITE_API_URL in env; for local dev, fallback to localhost
 const API_BASE_URL =
   (import.meta as any).env?.VITE_API_URL ?? "http://localhost:5000";
- 
+
 export default function App() {
   const [files1, setFiles1] = useState<File[]>([]);
   const [trainingFile, setTrainingFile] = useState<File[]>([]);
@@ -180,13 +180,17 @@ export default function App() {
   const [semesterOptions, setSemesterOptions] = useState<SemesterOption[]>([]);
   const [isLoadingSemesters, setIsLoadingSemesters] = useState(false);
   const [semestersError, setSemestersError] = useState<string | null>(null);
-  
+
   const [crnFilter, setCrnFilter] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState<string>("");
   const [departments, setDepartments] = useState<DepartmentOption[]>([]);
   const [isLoadingDepartments, setIsLoadingDepartments] = useState(false);
   const [departmentsError, setDepartmentsError] = useState<string | null>(null);
 
+  type PredictionSeason = "spring" | "fall";
+
+  const [predictionSeason, setPredictionSeason] = useState<PredictionSeason>("spring");
+  const [predictionYear, setPredictionYear] = useState<string>("2026"); // default year as string
   // Prediction term (term to predict enrollment for) - default 202640
   const [predictionTerm, setPredictionTerm] = useState<number>(202640);
 
@@ -195,13 +199,12 @@ export default function App() {
   const [rawResponse, setRawResponse] = useState<any>(null);
   const [rawText, setRawText] = useState<string | null>(null);
   const [showResults, setShowResults] = useState(false);
-  const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
   const [sortColumn, setSortColumn] = useState<SortColumn | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-    useEffect(() => {
+  useEffect(() => {
     const fetchSemesters = async () => {
       setIsLoadingSemesters(true);
       setSemestersError(null);
@@ -226,7 +229,7 @@ export default function App() {
       } catch (err) {
         console.error("Failed to fetch semesters:", err);
         setSemestersError(
-          err instanceof Error ? err.message : "Unknown error fetching semesters"
+          err instanceof Error ? err.message : "Unknown error fetching semesters",
         );
       } finally {
         setIsLoadingSemesters(false);
@@ -237,37 +240,48 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-  const fetchDepartments = async () => {
-    setIsLoadingDepartments(true);
-    setDepartmentsError(null);
+    const fetchDepartments = async () => {
+      setIsLoadingDepartments(true);
+      setDepartmentsError(null);
 
-    try {
-      const res = await fetch(`${API_BASE_URL}/api/departments`);
-      if (!res.ok) {
-        throw new Error(`Server responded with status ${res.status}`);
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/departments`);
+        if (!res.ok) {
+          throw new Error(`Server responded with status ${res.status}`);
+        }
+
+        const data = await res.json();
+        if (!data.ok) {
+          throw new Error(data.error || "Backend returned ok=false");
+        }
+
+        const depts = (data.departments ?? []) as DepartmentOption[];
+        setDepartments(depts);
+      } catch (err) {
+        console.error("Failed to fetch departments:", err);
+        setDepartmentsError(
+          err instanceof Error ? err.message : "Unknown error fetching departments",
+        );
+      } finally {
+        setIsLoadingDepartments(false);
       }
+    };
 
-      const data = await res.json();
-      if (!data.ok) {
-        throw new Error(data.error || "Backend returned ok=false");
-      }
+    fetchDepartments();
+  }, []);
 
-      const depts = (data.departments ?? []) as DepartmentOption[];
-      setDepartments(depts);
-    } catch (err) {
-      console.error("Failed to fetch departments:", err);
-      setDepartmentsError(
-        err instanceof Error ? err.message : "Unknown error fetching departments"
-      );
-    } finally {
-      setIsLoadingDepartments(false);
-    }
-  };
+  useEffect(() => {
+  const year = Number(predictionYear);
 
-  fetchDepartments();
-}, []);
+  // basic guard so you don't generate NaN terms
+  if (!Number.isFinite(year) || predictionYear.trim().length !== 4) return;
 
- 
+  const suffix = predictionSeason === "spring" ? "40" : "10";
+  const term = Number(`${year}${suffix}`);
+
+  setPredictionTerm(term);
+}, [predictionSeason, predictionYear]);
+
   const handleGenerateReport = async () => {
     console.log("Selected semesters:", selectedSemesters);
     console.log("Selected department:", departmentFilter || "(none)");
@@ -275,14 +289,14 @@ export default function App() {
 
     setIsLoading(true);
     setError(null);
- 
+
     try {
       // Build aggregated SQL query for predictions
       // Group by term, subj, crse and sum enrollment across sections
       let sql = `
         SELECT term, subj, crse, SUM(act) as act, AVG(credits) as credits 
         FROM section_detail_report_sbussection_detail_report_sbus
-        WHERE term = ${predictionTerm}
+        WHERE term = ${predictionTerm} GROUP BY term, subj, crse
       `;
 
       // Apply department filter if selected
@@ -299,24 +313,24 @@ export default function App() {
       const payload = {
         sql: sql,
         model_prefix: "enrollment_tree_min_",
-        features: "min"
+        features: "min",
       };
 
       // Call prediction endpoint
       const response = await fetch(`${API_BASE_URL}/api/predict/sql`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
       });
- 
+
       if (!response.ok) {
         throw new Error(`Server responded with status ${response.status}`);
       }
- 
+
       const text = await response.text();
       console.log("Raw response text:", text);
       setRawText(text);
- 
+
       let json: any;
       try {
         json = JSON.parse(text);
@@ -324,25 +338,27 @@ export default function App() {
         console.error("Failed to parse JSON from response text", err);
         throw new Error("Backend did not return valid JSON");
       }
- 
+
       console.log("Parsed prediction response:", json);
       setRawResponse(json);
- 
+
       if (json.error) {
         throw new Error(json.error);
       }
 
       // json is an array of prediction results
-      // Each item has: { index, prediction, term, subj, crse, act, credits }
       const rows = Array.isArray(json) ? json : [];
-      
+
       const cols = rows.length > 0 ? Object.keys(rows[0]) : [];
       console.log("Columns:", cols);
       console.log("Predictions count:", rows.length);
-      
+
       setColumns(cols);
+
+      // NOTE: You currently aren't mapping rows -> ResultData anywhere in this file.
+      // Leaving results as-is (empty) to match your existing behavior.
       setResults([]);
-      setSelectedRows(new Set());
+
       setShowResults(true);
     } catch (err) {
       console.error("Error generating predictions:", err);
@@ -352,7 +368,7 @@ export default function App() {
       setIsLoading(false);
     }
   };
- 
+
   const handleSort = (column: SortColumn) => {
     if (sortColumn === column) {
       // Toggle direction
@@ -363,14 +379,14 @@ export default function App() {
       setSortDirection("desc");
     }
   };
- 
+
   const getSortedResults = () => {
     if (!sortColumn) return results;
- 
+
     return [...results].sort((a, b) => {
-      let aVal: number | string = a[sortColumn];
-      let bVal: number | string = b[sortColumn];
- 
+      let aVal: number | string = (a as any)[sortColumn];
+      let bVal: number | string = (b as any)[sortColumn];
+
       // For course number, extract numeric part for sorting
       if (sortColumn === "courseNumber") {
         const aNum = parseInt(a.courseNumber.split(" ")[1]);
@@ -378,7 +394,7 @@ export default function App() {
         aVal = aNum;
         bVal = bNum;
       }
- 
+
       if (typeof aVal === "number" && typeof bVal === "number") {
         return sortDirection === "desc" ? bVal - aVal : aVal - bVal;
       } else {
@@ -393,25 +409,7 @@ export default function App() {
       }
     });
   };
- 
-  const toggleRowSelection = (id: string) => {
-    const newSelected = new Set(selectedRows);
-    if (newSelected.has(id)) {
-      newSelected.delete(id);
-    } else {
-      newSelected.add(id);
-    }
-    setSelectedRows(newSelected);
-  };
- 
-  const toggleSelectAll = () => {
-    if (selectedRows.size === results.length) {
-      setSelectedRows(new Set());
-    } else {
-      setSelectedRows(new Set(results.map((r) => r.id)));
-    }
-  };
- 
+
   const SortIcon = ({ column }: { column: SortColumn }) => {
     if (sortColumn !== column) {
       return <ArrowUpDown className="w-4 h-4 ml-1" />;
@@ -422,26 +420,16 @@ export default function App() {
       <ArrowUp className="w-4 h-4 ml-1" />
     );
   };
- 
-  // Placeholder: no real export logic for now
-  const handleExport = (format: "csv" | "xlsx") => {
-    console.log(`Export (${format}) clicked – logic to be implemented.`);
-  };
- 
+
   const sortedResults = getSortedResults();
- 
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#C2D8FF]/30 to-white">
       <div className="max-w-6xl mx-auto px-6 py-6">
         <div className="w-full mb-6 flex items-center justify-between gap-8">
-          
           {/* Logo */}
           <div className="w-64 h-64 flex items-center justify-start">
-            <img
-              className="object-contain"
-              src="CCSU_Logo.svg"
-              alt="SOB Logo"
-            />
+            <img className="object-contain" src="CCSU_Logo.svg" alt="SOB Logo" />
           </div>
 
           {/* Title Block 1 */}
@@ -449,20 +437,20 @@ export default function App() {
             <div className="text-center">
               <div
                 className="text-[#194678]"
-                style={{ fontSize: "2rem", fontWeight: 800 }}>
+                style={{ fontSize: "2rem", fontWeight: 800 }}
+              >
                 Course Sense
               </div>
-              <p className="text-[#194678]/70 text-lg font-medium">Enrollment Forecaster</p>
+              <p className="text-[#194678]/70 text-lg font-medium">
+                Enrollment Forecaster
+              </p>
             </div>
           </div>
 
           {/* Title Block 2 */}
           <div className="w-64 h-64 flex items-center justify-center">
-            <div className="text-center">
-              {/*Blank for now to keep the columns aligned*/}
-            </div>
+            <div className="text-center">{/*Blank for now*/}</div>
           </div>
-
         </div>
 
         {/* Main Content with Tabs */}
@@ -482,20 +470,19 @@ export default function App() {
                 Training
               </TabsTrigger>
             </TabsList>
- 
+
             <TabsContent value="prediction" className="space-y-6">
               {/* File Uploads */}
               <div>
                 <FileUpload
                   label="Upload Model"
                   onFileChange={setFiles1}
-                  description=
-                    "Upload .pkl file."
+                  description={"Upload .pkl file."}
                   acceptedExtensions={[".pkl"]}
                   limitUpload={true}
                 />
               </div>
- 
+
               {/* Dropdowns and Filters */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Model Select */}
@@ -507,12 +494,11 @@ export default function App() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="linear">Linear</SelectItem>
-                      <SelectItem value="random-forest">
-                        Random Forest
-                      </SelectItem>
+                      <SelectItem value="random-forest">Random Forest</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
+
                 {/* Department Filter */}
                 <div className="space-y-2">
                   <label className="text-sm">Filter by Department</label>
@@ -552,17 +538,47 @@ export default function App() {
                     </SelectContent>
                   </Select>
                 </div>
- 
-
               </div>
- 
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Semester Select */}
+                <div className="space-y-2">
+                  <label className="text-sm">Select Prediction Semester</label>
+                  <Select
+                    value={predictionSeason}
+                    onValueChange={(val) => setPredictionSeason(val as PredictionSeason)}
+                  >
+                    <SelectTrigger className="border-gray-300 hover:border-[#94BAEB]">
+                      <SelectValue placeholder="Select semester" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="spring">Spring</SelectItem>
+                      <SelectItem value="fall">Fall</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+
+                {/* Year Select */}
+                <div className="space-y-2">
+                  <label className="text-sm">Enter Prediction Year</label>
+                  <Input
+                    type="text"
+                    placeholder="Enter year"
+                    value={crnFilter}
+                    onChange={(e) => setCrnFilter(e.target.value)}
+                    className="border-gray-300 hover:border-[#94BAEB] focus:border-[#194678]"
+                  />
+                </div>
+              </div>
+
               {/* Error message */}
               {error && (
                 <div className="text-red-600 text-sm border border-red-300 bg-red-50 px-4 py-2 rounded">
                   Error: {error}
                 </div>
               )}
- 
+
               {/* Generate Button */}
               <div className="flex justify-center">
                 <Button
@@ -573,7 +589,7 @@ export default function App() {
                   {isLoading ? "Generating..." : "Generate Report"}
                 </Button>
               </div>
- 
+
               {/* Results Section */}
               {showResults && (
                 <div className="space-y-4">
@@ -600,32 +616,16 @@ export default function App() {
                       </div>
                     </div>
                   </div>
- 
-                  {/* Export Button (no logic yet) */}
+
+                  {/* Export Button (all rows by default) */}
                   <div className="flex justify-end">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className="border-[#194678] text-[#194678] hover:bg-[#C2D8FF]/20"
-                        >
-                          <Download className="w-4 h-4 mr-2" />
-                          Export ({selectedRows.size} selected)
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          onClick={() => handleExport("csv")}
-                        >
-                          Export as CSV
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => handleExport("xlsx")}
-                        >
-                          Export as XLSX
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <Button
+                      variant="outline"
+                      className="border-[#194678] text-[#194678] hover:bg-[#C2D8FF]/20"
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      Export
+                    </Button>
                   </div>
                 </div>
               )}
@@ -633,7 +633,6 @@ export default function App() {
 
             <TabsContent value="training" className="py-8">
               <div className="space-y-6">
-
                 {/* Schema Information */}
                 <div className="border border-[#94BAEB] rounded-lg overflow-hidden">
                   <div className="bg-[#194678] text-white px-4 py-3">
@@ -649,7 +648,10 @@ export default function App() {
                       {/* Required Fields */}
                       <div className="py-2">
                         <p className="text-md mb-1">Required Fields:</p>
-                        <p className="text-sm">Term, Term Desc, CRN, Subj, Crse, Sec, Credits, Title, Act, XL Act</p>
+                        <p className="text-sm">
+                          Term, Term Desc, CRN, Subj, Crse, Sec, Credits, Title,
+                          Act, XL Act
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -660,8 +662,9 @@ export default function App() {
                   <FileUpload
                     label="Upload Training Data"
                     onFileChange={setTrainingFile}
-                    description=
+                    description={
                       "Term, Term Desc, CRN, Subj, Crse, Sec, Credits, Title, Act, XL Act"
+                    }
                     acceptedExtensions={[".csv", ".xlsx"]}
                     limitUpload={false}
                   />
