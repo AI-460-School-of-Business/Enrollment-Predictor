@@ -473,13 +473,13 @@ export default function App() {
                 value="prediction"
                 className="data-[state=active]:bg-[#194678] data-[state=active]:text-white"
               >
-                Prediction Mode
+                Prediction
               </TabsTrigger>
               <TabsTrigger
                 value="training"
                 className="data-[state=active]:bg-[#194678] data-[state=active]:text-white"
               >
-                Training Mode
+                Training
               </TabsTrigger>
             </TabsList>
  
