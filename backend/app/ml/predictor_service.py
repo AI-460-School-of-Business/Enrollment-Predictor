@@ -8,6 +8,7 @@ project's FeatureEngineer, and produce predictions. Exposes a simple
 This file is intentionally lightweight and does not start any servers. The
 Flask app should import `flask_predict` and call it with the parsed JSON body.
 """
+
 from __future__ import annotations
 
 import pickle
