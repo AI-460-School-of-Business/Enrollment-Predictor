@@ -16,236 +16,70 @@ from openpyxl.utils.dataframe import dataframe_to_rows
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Any
-import pickle
 import os
 import sys
+import json
 
-# Database
-try:
-    import psycopg2
-except ImportError:
-    print("Error: psycopg2 not installed. Run: pip install psycopg2-binary")
-    sys.exit(1)
 
-# Database configuration
-DB_CONFIG = {
-    "host": os.getenv("DB_HOST", "localhost"),
-    "port": int(os.getenv("DB_PORT", 5432)),
-    "user": os.getenv("POSTGRES_USER", "postgres"),
-    "password": os.getenv("POSTGRES_PASSWORD", ""),
-    "database": os.getenv("POSTGRES_DB", "postgres"),
-}
-
-def get_db_connection():
-    """Create database connection."""
-    try:
-        return psycopg2.connect(**DB_CONFIG)
-    except psycopg2.Error as e:
-        print(f"Database connection error: {e}")
-        sys.exit(1)
-
-def get_course_identifiers(custom_query: Optional[str] = None) -> pd.DataFrame:
+def load_predictions_from_json(json_data: List[Dict[str, Any]]) -> pd.DataFrame:
     """
-    Get course identifiers from the database.
+    Convert JSON prediction data from API endpoint to DataFrame.
     
     Args:
-        custom_query: Optional SQL query to get specific courses.
-                     If None, queries all unique course identifiers from the main table.
+        json_data: List of prediction dictionaries from API endpoint with format:
+                   [{"subj": "MIS", "crse": 460, "term": 202540, 
+                     "prediction": 76.98, "act": 20, "credits": 3, ...}, ...]
     
     Returns:
-        DataFrame with columns: subj, crse, and other course details
+        DataFrame with predictions formatted for report generation
     """
-    conn = get_db_connection()
+    print(f"Loading {len(json_data)} predictions from JSON data...")
     
-    try:
-        if custom_query:
-            print(f"Fetching course identifiers with custom query...")
-            courses_df = pd.read_sql(custom_query, conn)
-        else:
-            # Auto-discover the main table
-            print("Auto-discovering course identifiers from database...")
-            
-            # Find the main enrollment table
-            tables_query = """
-                SELECT table_name 
-                FROM information_schema.tables 
-                WHERE table_schema = 'public' 
-                AND table_type = 'BASE TABLE'
-                ORDER BY table_name;
-            """
-            tables_df = pd.read_sql(tables_query, conn)
-            available_tables = tables_df['table_name'].tolist()
-            
-            # Look for the section detail report table (our main table)
-            main_table = None
-            for table in available_tables:
-                if 'section' in table.lower() and 'detail' in table.lower():
-                    main_table = table
-                    break
-            
-            if not main_table:
-                # Fallback to first table
-                main_table = available_tables[0] if available_tables else None
-            
-            if not main_table:
-                raise Exception("No tables found in database")
-            
-            print(f"Using table: {main_table}")
-            
-            # Get unique course identifiers
-            # Query for distinct subj+crse combinations with latest term info
-            query = f"""
-                SELECT DISTINCT
-                    subj,
-                    crse,
-                    title,
-                    credits
-                FROM {main_table}
-                WHERE subj IS NOT NULL 
-                  AND crse IS NOT NULL
-                ORDER BY subj, crse;
-            """
-            
-            courses_df = pd.read_sql(query, conn)
-        
-        print(f"Found {len(courses_df)} unique courses")
-        print(f"Columns: {list(courses_df.columns)}")
-        
-        # Verify we have subj and crse
-        has_subj = any('subj' in col.lower() for col in courses_df.columns)
-        has_crse = any('crse' in col.lower() for col in courses_df.columns)
-        
-        if not (has_subj and has_crse):
-            raise Exception("Query result must include 'subj' and 'crse' columns")
-        
-        return courses_df
-        
-    finally:
-        conn.close()
-
-
-def run_predictions(model_path: str, courses_df: pd.DataFrame, target_term: int) -> pd.DataFrame:
-    """
-    Run enrollment predictions for the given courses.
+    # Convert to DataFrame
+    df = pd.DataFrame(json_data)
     
-    Args:
-        model_path: Path to the trained model pickle file
-        courses_df: DataFrame with course identifiers (subj, crse, etc.)
-        target_term: The term to predict for (e.g., 202501 for Spring 2025)
-    
-    Returns:
-        DataFrame with predictions including: subj, crse, term, predicted_enrollment
-    """
-    print(f"\nLoading model from {model_path}...")
-    
-    # Load model
-    with open(model_path, 'rb') as f:
-        model_data = pickle.load(f)
-    
-    model = model_data['model']
-    scaler = model_data.get('scaler')
-    label_encoders = model_data.get('label_encoders', {})
-    feature_columns = model_data['feature_columns']
-    model_type = model_data.get('model_type', 'unknown')
-    
-    print(f"Model type: {model_type}")
-    print(f"Required features: {feature_columns}")
-    
-    # Create prediction dataset
-    # For each course, create entries for different sections (typically 1-5)
-    prediction_records = []
-    
-    for _, course in courses_df.iterrows():
-        # Create predictions for sections 1-3 (common section numbers)
-        for section in [1, 2, 3]:
-            record = {
-                'term': target_term,
-                'subj': course['subj'],
-                'crse': course['crse'],
-                'sec': section,
-                'credits': course.get('credits', 3.0)  # Default to 3 credits if not available
-            }
-            prediction_records.append(record)
-    
-    X_pred = pd.DataFrame(prediction_records)
-    print(f"\nCreated {len(X_pred)} prediction records")
-    
-    # Ensure all required features are present
-    for col in feature_columns:
-        if col not in X_pred.columns:
-            print(f"Warning: Feature '{col}' not in prediction data, adding with default value 0")
-            X_pred[col] = 0
-    
-    # Select only the features used by the model
-    X_pred_features = X_pred[feature_columns].copy()
-    
-    # Preprocess features (same as in training)
-    # Handle categorical variables
-    categorical_columns = X_pred_features.select_dtypes(include=['object']).columns
-    
-    for col in categorical_columns:
-        if col in label_encoders:
-            # Use existing encoder
-            le = label_encoders[col]
-            # Handle unknown categories
-            X_pred_features[col] = X_pred_features[col].apply(
-                lambda x: le.transform([x])[0] if x in le.classes_ else -1
-            )
-        else:
-            # Simple encoding for new categorical columns
-            X_pred_features[col] = pd.factorize(X_pred_features[col])[0]
-    
-    # Scale numerical features
-    if scaler:
-        X_pred_scaled = scaler.transform(X_pred_features)
-    else:
-        X_pred_scaled = X_pred_features.values
-    
-    # Make predictions
-    print("Running predictions...")
-    predictions = model.predict(X_pred_scaled)
-    
-    # Round predictions to nearest integer (can't have fractional students)
-    predictions = np.round(predictions).astype(int)
-    
-    # Ensure non-negative predictions
-    predictions = np.maximum(predictions, 0)
-    
-    # Add predictions to the dataframe
-    X_pred['Predicted_Enrollment'] = predictions
-    
-    # Rename columns for report
-    X_pred = X_pred.rename(columns={
+    # Rename columns to match expected format
+    column_mapping = {
         'subj': 'Subject',
         'crse': 'Course',
-        'sec': 'Section',
         'term': 'Term',
-        'credits': 'Credits'
-    })
+        'credits': 'Credits',
+        'prediction': 'Predicted_Enrollment',
+        'act': 'Actual_Enrollment'  # If available
+    }
     
-    print(f"Predictions complete!")
-    print(f"Total predicted enrollment: {predictions.sum()}")
-    print(f"Average predicted enrollment: {predictions.mean():.1f}")
+    df = df.rename(columns={k: v for k, v in column_mapping.items() if k in df.columns})
     
-    return X_pred
+    # Ensure Predicted_Enrollment is rounded to integer
+    if 'Predicted_Enrollment' in df.columns:
+        df['Predicted_Enrollment'] = df['Predicted_Enrollment'].round().astype(int)
+    
+    print(f"Loaded predictions for {df['Subject'].nunique()} unique subjects")
+    print(f"Total predicted enrollment: {df['Predicted_Enrollment'].sum()}")
+    print(f"Average predicted enrollment: {df['Predicted_Enrollment'].mean():.1f}")
+    
+    return df
 
 
 class EnrollmentReportGenerator:
     """Generate comprehensive Excel reports for enrollment predictions."""
     
-    def __init__(self, model_path: str, predictions_df: pd.DataFrame, accuracy_df: Optional[pd.DataFrame] = None):
+    def __init__(self, predictions_df: pd.DataFrame, accuracy_df: Optional[pd.DataFrame] = None, model_info: Optional[Dict[str, str]] = None):
         """
         Initialize the report generator.
         
         Args:
-            model_path: Path to the trained model pickle file
-            predictions_df: DataFrame with enrollment predictions
+            predictions_df: DataFrame with enrollment predictions from API
             accuracy_df: Optional DataFrame with per-course accuracy metrics
+            model_info: Optional dict with model metadata (model_type, feature_schema, model_name)
         """
-        self.model_path = model_path
         self.predictions_df = predictions_df
         self.accuracy_df = accuracy_df
-        self.model_metadata = self._load_model_metadata()
+        self.model_metadata = model_info or {
+            'model_type': 'Machine Learning',
+            'feature_schema': 'Standard',
+            'model_file': 'N/A'
+        }
         
         # Excel styling
         self.header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
@@ -258,26 +92,6 @@ class EnrollmentReportGenerator:
             top=Side(style='thin'),
             bottom=Side(style='thin')
         )
-        
-    def _load_model_metadata(self) -> Dict[str, Any]:
-        """Load model metadata from pickle file."""
-        try:
-            with open(self.model_path, 'rb') as f:
-                model_data = pickle.load(f)
-            return {
-                'model_type': model_data.get('model_type', 'Unknown'),
-                'feature_schema': model_data.get('feature_schema', 'Unknown'),
-                'feature_columns': model_data.get('feature_columns', []),
-                'model_file': Path(self.model_path).name
-            }
-        except Exception as e:
-            print(f"Warning: Could not load model metadata: {e}")
-            return {
-                'model_type': 'Unknown',
-                'feature_schema': 'Unknown',
-                'feature_columns': [],
-                'model_file': Path(self.model_path).name
-            }
     
     def generate_report(self, output_path: str):
         """Generate the complete Excel report."""
@@ -370,12 +184,11 @@ class EnrollmentReportGenerator:
         ws.column_dimensions['D'].width = 20
         
     def _generate_synopsis(self) -> str:
-        """Generate a text synopsis of the model."""
-        model_type = self.model_metadata['model_type']
-        features = len(self.model_metadata['feature_columns'])
+        """Generate a text synopsis of the predictions."""
+        model_type = self.model_metadata.get('model_type', 'Machine Learning')
         
-        synopsis = f"""This report presents enrollment predictions generated using a {model_type} machine learning model. """
-        synopsis += f"""The model was trained on historical enrollment data using {features} key features including course identifiers, """
+        synopsis = f"""This report presents enrollment predictions generated using a {model_type} model. """
+        synopsis += f"""The predictions are based on historical enrollment data including course identifiers, """
         synopsis += f"""term information, section details, and credit hours.\n\n"""
         
         if self.accuracy_df is not None:
@@ -722,13 +535,14 @@ class EnrollmentReportGenerator:
     def _get_department_name(self, subject_code: str) -> str:
         """Map subject codes to department names."""
         dept_mapping = {
+            'AC': 'Accounting',
+            'FIN': 'Finance',
+            'MGT': 'Management',
             'MIS': 'Management Information Systems',
-            'FIN': 'Finance Department',
-            'AC': 'Accounting Department',
+            'MKT': 'Marketing',
             'BUS': 'Business Administration',
-            'MGT': 'Management Department',
-            'MKT': 'Marketing Department',
-            'ECON': 'Economics Department',
+            'LAW': 'Business Law & Ethics',
+            'MC': 'Managerial Communication',
         }
         return dept_mapping.get(subject_code, f"{subject_code} Department")
     
@@ -780,36 +594,26 @@ class EnrollmentReportGenerator:
 
 
 def generate_enrollment_report(
-    model_path: str,
+    predictions_json: Optional[List[Dict[str, Any]]] = None,
     predictions_csv: Optional[str] = None,
     accuracy_csv: Optional[str] = None,
     output_path: Optional[str] = None,
-    target_term: Optional[int] = None,
-    courses_query: Optional[str] = None
+    model_info: Optional[Dict[str, str]] = None
 ):
     """
-    Generate an enrollment prediction Excel report.
+    Generate an enrollment prediction Excel report from API data.
     
     Args:
-        model_path: Path to trained model pickle file
-        predictions_csv: Optional path to CSV file with predictions (if None, will run predictions)
+        predictions_json: Optional list of prediction dictionaries from API endpoint
+        predictions_csv: Optional path to CSV file with predictions
         accuracy_csv: Optional path to CSV file with per-course accuracy
         output_path: Optional output path for Excel file (auto-generated if not provided)
-        target_term: Optional term to predict for (required if predictions_csv is None)
-        courses_query: Optional SQL query to get specific courses (if None, gets all courses)
+        model_info: Optional dict with model metadata (model_type, feature_schema, model_name)
     """
-    # If predictions CSV not provided, run predictions
-    if predictions_csv is None:
-        if target_term is None:
-            raise ValueError("target_term must be provided when predictions_csv is None")
-        
-        print("No predictions CSV provided, running predictions...")
-        
-        # Get course identifiers
-        courses_df = get_course_identifiers(courses_query)
-        
-        # Run predictions
-        predictions_df = run_predictions(model_path, courses_df, target_term)
+    # Load predictions from JSON or CSV
+    if predictions_json is not None:
+        print("Loading predictions from JSON data...")
+        predictions_df = load_predictions_from_json(predictions_json)
         
         # Optionally save predictions to CSV
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -817,10 +621,12 @@ def generate_enrollment_report(
         predictions_csv_path.parent.mkdir(parents=True, exist_ok=True)
         predictions_df.to_csv(predictions_csv_path, index=False)
         print(f"Predictions saved to: {predictions_csv_path}")
-    else:
+    elif predictions_csv is not None:
         # Load predictions from CSV
         print(f"Loading predictions from {predictions_csv}...")
         predictions_df = pd.read_csv(predictions_csv)
+    else:
+        raise ValueError("Either predictions_json or predictions_csv must be provided")
     
     # Load accuracy data if provided
     accuracy_df = pd.read_csv(accuracy_csv) if accuracy_csv else None
@@ -834,7 +640,7 @@ def generate_enrollment_report(
     
     # Create report
     print(f"\nGenerating Excel report...")
-    generator = EnrollmentReportGenerator(model_path, predictions_df, accuracy_df)
+    generator = EnrollmentReportGenerator(predictions_df, accuracy_df, model_info)
     generator.generate_report(output_path)
     
     # Print both container and Windows paths
@@ -855,45 +661,61 @@ if __name__ == "__main__":
     import argparse
     
     parser = argparse.ArgumentParser(
-        description="Generate enrollment prediction Excel reports",
+        description="Generate enrollment prediction Excel reports from API data",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Generate report with existing predictions CSV
-  python generate_report.py --model data/prediction_models/enrollment_tree_min_20251112_024130.pkl --predictions predictions.csv --accuracy server/ml/test_results/per_course_accuracy_tree_20251109_013953.csv
+  # Generate report with predictions from JSON file (from API endpoint)
+  python generate_report.py --json predictions.json
   
-  # Generate report by running predictions for Spring 2025
-  python generate_report.py --model data/prediction_models/enrollment_tree_min_20251112_024130.pkl --term 202501
+  # Generate report with existing predictions CSV
+  python generate_report.py --predictions predictions.csv
   
   # Generate report with accuracy data
-  python generate_report.py --model data/prediction_models/enrollment_tree_min_20251112_024130.pkl --term 202501 --accuracy server/ml/test_results/per_course_accuracy_tree_20251109_013953.csv
+  python generate_report.py --json predictions.json --accuracy backend/app/ml/test_results/per_course_accuracy_tree_20251109_013953.csv
   
-  # Generate report with custom course query (only BUS and AC courses)
-  python generate_report.py --model data/prediction_models/enrollment_tree_min_20251112_024130.pkl --term 202501 --query "SELECT DISTINCT subj, crse, title, credits FROM section_detail_report_sbussection_detail_report_sbus WHERE subj IN ('BUS', 'AC')"
+  # With custom model info
+  python generate_report.py --json predictions.json --model-type "Tree Ensemble" --model-name "enrollment_tree_v2"
         """
     )
     
-    parser.add_argument("--model", required=True, help="Path to trained model pickle file (default location: data/prediction_models/)")
-    parser.add_argument("--predictions", help="Path to CSV file with predictions (if not provided, will run predictions)")
-    parser.add_argument("--accuracy", help="Path to CSV file with per-course accuracy metrics (default location: server/ml/test_results/)")
-    parser.add_argument("--output", help="Output path for Excel report (auto-generated if not provided, saves to server/web/reports/)")
-    parser.add_argument("--term", type=int, help="Term to predict for (e.g., 202501 for Spring 2025, required if --predictions not provided)")
-    parser.add_argument("--query", help="SQL query to get specific courses (if not provided, gets all courses)")
+    parser.add_argument("--json", help="Path to JSON file with predictions from API endpoint")
+    parser.add_argument("--predictions", help="Path to CSV file with predictions")
+    parser.add_argument("--accuracy", help="Path to CSV file with per-course accuracy metrics")
+    parser.add_argument("--output", help="Output path for Excel report (auto-generated if not provided)")
+    parser.add_argument("--model-type", help="Model type for report metadata (e.g., 'Tree Ensemble', 'Neural Network')")
+    parser.add_argument("--model-name", help="Model name/file for report metadata")
+    parser.add_argument("--feature-schema", help="Feature schema used (e.g., 'min', 'rich', 'auto')")
     
     args = parser.parse_args()
     
     # Validate arguments
-    if args.predictions is None and args.term is None:
-        parser.error("Either --predictions or --term must be provided")
+    if args.json is None and args.predictions is None:
+        parser.error("Either --json or --predictions must be provided")
     
     try:
+        # Load JSON data if provided
+        predictions_json = None
+        if args.json:
+            print(f"Loading JSON data from {args.json}...")
+            with open(args.json, 'r') as f:
+                predictions_json = json.load(f)
+        
+        # Build model info if provided
+        model_info = None
+        if args.model_type or args.model_name or args.feature_schema:
+            model_info = {
+                'model_type': args.model_type or 'Machine Learning',
+                'feature_schema': args.feature_schema or 'Standard',
+                'model_file': args.model_name or 'N/A'
+            }
+        
         result = generate_enrollment_report(
-            model_path=args.model,
+            predictions_json=predictions_json,
             predictions_csv=args.predictions,
             accuracy_csv=args.accuracy,
             output_path=args.output,
-            target_term=args.term,
-            courses_query=args.query
+            model_info=model_info
         )
         print(f"\n✓ Report generation complete: {result}")
     except Exception as e:

@@ -513,19 +513,6 @@ export default function App() {
                     </SelectContent>
                   </Select>
                 </div>
- 
-                {/* Semesters */}
-                <SemesterSelector
-                  allSemesters={semesterOptions}
-                  selectedSemesters={selectedSemesters}
-                  onSelectionChange={setSelectedSemesters}
-                  isLoading={isLoadingSemesters}
-                  error={semestersError}
-                />
-              </div>
- 
-              {/* Filters Row */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Department Filter */}
                 <div className="space-y-2">
                   <label className="text-sm">Filter by Department</label>
@@ -565,6 +552,8 @@ export default function App() {
                     </SelectContent>
                   </Select>
                 </div>
+ 
+
               </div>
  
               {/* Error message */}
@@ -677,6 +666,15 @@ export default function App() {
                     limitUpload={false}
                   />
                 </div>
+
+                {/* Semesters */}
+                <SemesterSelector
+                  allSemesters={semesterOptions}
+                  selectedSemesters={selectedSemesters}
+                  onSelectionChange={setSelectedSemesters}
+                  isLoading={isLoadingSemesters}
+                  error={semestersError}
+                />
 
                 {/* Train Model Button */}
                 <div className="flex justify-center">
