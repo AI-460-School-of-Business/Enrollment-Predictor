@@ -458,7 +458,7 @@ export default function App() {
               {/* File Uploads */}
               <div>
                 <FileUpload
-                  label="Data Upload"
+                  label="Model file upload"
                   onFileChange={setFiles1}
                   description=
                     "Upload .pkl file."
