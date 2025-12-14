@@ -173,20 +173,6 @@ def get_semesters():
 
 @app.route("/api/departments", methods=["GET"])
 def get_departments():
-    """
-    Return departments whose subject codes appear in the database's `subj` column,
-    mapped via subjectDepartmentMap.json.
-
-    Response:
-    {
-      "ok": true,
-      "departments": [
-        { "code": "AC",  "name": "Accounting" },
-        { "code": "FIN", "name": "Finance" },
-        ...
-      ]
-    }
-    """
     conn = None
     try:
         conn = get_db_connection()
@@ -211,8 +197,8 @@ def get_departments():
         if df_subj.empty:
             return jsonify({"ok": True, "departments": []})
 
-        # Map subj codes to department names using SUBJECT_DEPT_MAP
-        dept_dict = {}  # code -> name (dedup)
+        # Keep ONLY codes that exist in subjectDepartmentMap.json
+        dept_dict = {}
         for _, row in df_subj.iterrows():
             code = row["subj"]
             if pd.isna(code):
@@ -221,13 +207,8 @@ def get_departments():
             if code_str in SUBJECT_DEPT_MAP:
                 dept_dict[code_str] = SUBJECT_DEPT_MAP[code_str]
 
-        departments = [
-            {"code": code, "name": name}
-            for code, name in dept_dict.items()
-        ]
-
-        # Sort alphabetically by department name
-        departments.sort(key=lambda d: d["name"])
+        departments = [{"code": c, "name": n} for c, n in dept_dict.items()]
+        departments.sort(key=lambda d: d["name"])  # sort by full title
 
         return jsonify({"ok": True, "departments": departments})
 

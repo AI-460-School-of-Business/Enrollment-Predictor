@@ -34,20 +34,27 @@ import {
   ChevronDown,
 } from "lucide-react";
 
-interface ResultData {
+import subjectDepartmentMap from "./subjectDepartmentMap.json";
+
+const SUBJECT_DEPT_MAP = subjectDepartmentMap as Record<string, string>;
+
+interface ResultRow {
   id: string;
-  confidenceLevel: number;
-  seatsNeeded: number;
-  courseNumber: string;
-  courseTitle: string;
+  deptName: string;   // mapped readable name
+  subj: string;       // actual subj code
+  crse: number;
+  credits: number;
+  prediction: number;
 }
 
 type SortColumn =
-  | "confidenceLevel"
-  | "seatsNeeded"
-  | "courseNumber"
-  | "courseTitle";
-type SortDirection = "asc" | "desc";
+  | "deptName"
+  | "subj"
+  | "crse"
+  | "credits"
+  | "prediction";
+
+  type SortDirection = "asc" | "desc";
 
 interface SemesterOption {
   term: number;
@@ -189,12 +196,11 @@ export default function App() {
 
   type PredictionSeason = "spring" | "fall";
 
-  const [predictionSeason, setPredictionSeason] = useState<PredictionSeason>("spring");
   const [predictionYear, setPredictionYear] = useState<string>("2026"); // default year as string
+  const [predictionSeason, setPredictionSeason] = useState<PredictionSeason>("spring");
   // Prediction term (term to predict enrollment for) - default 202640
-  const [predictionTerm, setPredictionTerm] = useState<number>(202640);
 
-  const [results, setResults] = useState<ResultData[]>([]);
+  const [results, setResults] = useState<ResultRow[]>([]);
   const [columns, setColumns] = useState<string[]>([]);
   const [rawResponse, setRawResponse] = useState<any>(null);
   const [rawText, setRawText] = useState<string | null>(null);
@@ -270,22 +276,12 @@ export default function App() {
     fetchDepartments();
   }, []);
 
-  useEffect(() => {
-  const year = Number(predictionYear);
-
-  // basic guard so you don't generate NaN terms
-  if (!Number.isFinite(year) || predictionYear.trim().length !== 4) return;
-
-  const suffix = predictionSeason === "spring" ? "40" : "10";
-  const term = Number(`${year}${suffix}`);
-
-  setPredictionTerm(term);
-}, [predictionSeason, predictionYear]);
-
   const handleGenerateReport = async () => {
     console.log("Selected semesters:", selectedSemesters);
     console.log("Selected department:", departmentFilter || "(none)");
-    console.log("Prediction term:", predictionTerm);
+    console.log("Prediction season:", predictionSeason);
+    console.log("Prediction year (export label):", predictionYear);
+
 
     setIsLoading(true);
     setError(null);
@@ -293,19 +289,24 @@ export default function App() {
     try {
       // Build aggregated SQL query for predictions
       // Group by term, subj, crse and sum enrollment across sections
+      // Build aggregated SQL query for predictions
+      const termSuffix = predictionSeason === "spring" ? "40" : "10";
+
       let sql = `
-        SELECT term, subj, crse, SUM(act) as act, AVG(credits) as credits 
+        SELECT term, subj, crse, SUM(act) AS act, AVG(credits) AS credits
         FROM section_detail_report_sbussection_detail_report_sbus
-        WHERE term = ${predictionTerm} GROUP BY term, subj, crse
+        WHERE RIGHT(term::text, 2) = '${termSuffix}'
       `;
 
-      // Apply department filter if selected
+      // Apply department filter BEFORE GROUP BY
       if (departmentFilter) {
         sql += ` AND subj = '${departmentFilter}'`;
       }
 
-      sql += ` GROUP BY term, subj, crse`;
-      sql += ` LIMIT 200`; // safety limit
+      sql += `
+        GROUP BY term, subj, crse
+        LIMIT 200
+      `;
 
       console.log("Generated SQL:", sql);
 
@@ -346,18 +347,24 @@ export default function App() {
         throw new Error(json.error);
       }
 
-      // json is an array of prediction results
-      const rows = Array.isArray(json) ? json : [];
+        const rows = Array.isArray(json) ? json : [];
 
-      const cols = rows.length > 0 ? Object.keys(rows[0]) : [];
-      console.log("Columns:", cols);
-      console.log("Predictions count:", rows.length);
+        const mapped: ResultRow[] = rows.map((r: any) => {
+          const subjCode = String(r.subj ?? "").trim().toUpperCase();
+          const deptName = SUBJECT_DEPT_MAP[subjCode] ?? subjCode;
 
-      setColumns(cols);
+          return {
+            id: `${r.term}-${subjCode}-${r.crse}`,  // stable unique id
+            deptName,
+            subj: subjCode,
+            crse: Number(r.crse),
+            credits: Number(r.credits),
+            prediction: Number(r.prediction),
+          };
+        });
 
-      // NOTE: You currently aren't mapping rows -> ResultData anywhere in this file.
-      // Leaving results as-is (empty) to match your existing behavior.
-      setResults([]);
+        setResults(mapped);
+        setShowResults(true);
 
       setShowResults(true);
     } catch (err) {
@@ -384,35 +391,27 @@ export default function App() {
     if (!sortColumn) return results;
 
     return [...results].sort((a, b) => {
-      let aVal: number | string = (a as any)[sortColumn];
-      let bVal: number | string = (b as any)[sortColumn];
+      const aVal = a[sortColumn];
+      const bVal = b[sortColumn];
 
-      // For course number, extract numeric part for sorting
-      if (sortColumn === "courseNumber") {
-        const aNum = parseInt(a.courseNumber.split(" ")[1]);
-        const bNum = parseInt(b.courseNumber.split(" ")[1]);
-        aVal = aNum;
-        bVal = bNum;
-      }
-
+      // numeric sort
       if (typeof aVal === "number" && typeof bVal === "number") {
         return sortDirection === "desc" ? bVal - aVal : aVal - bVal;
-      } else {
-        // String comparison
-        const aStr = String(aVal).toLowerCase();
-        const bStr = String(bVal).toLowerCase();
-        if (sortDirection === "desc") {
-          return bStr.localeCompare(aStr);
-        } else {
-          return aStr.localeCompare(bStr);
-        }
       }
+
+      // string sort
+      const aStr = String(aVal).toLowerCase();
+      const bStr = String(bVal).toLowerCase();
+
+      return sortDirection === "desc"
+        ? bStr.localeCompare(aStr)
+        : aStr.localeCompare(bStr);
     });
   };
 
   const SortIcon = ({ column }: { column: SortColumn }) => {
     if (sortColumn !== column) {
-      return <ArrowUpDown className="w-4 h-4 ml-1" />;
+      return <ArrowUpDown className="w-4 h-4 ml-1 opacity-50" />;
     }
     return sortDirection === "desc" ? (
       <ArrowDown className="w-4 h-4 ml-1" />
@@ -420,6 +419,7 @@ export default function App() {
       <ArrowUp className="w-4 h-4 ml-1" />
     );
   };
+
 
   const sortedResults = getSortedResults();
 
@@ -524,7 +524,7 @@ export default function App() {
                     </SelectTrigger>
                     <SelectContent>
                       {departments.map((dept) => (
-                        <SelectItem key={dept.code} value={dept.name}>
+                        <SelectItem key={dept.code} value={dept.code}>
                           {dept.name}
                         </SelectItem>
                       ))}
@@ -564,9 +564,13 @@ export default function App() {
                   <label className="text-sm">Enter Prediction Year</label>
                   <Input
                     type="text"
-                    placeholder="Enter year"
-                    value={crnFilter}
-                    onChange={(e) => setCrnFilter(e.target.value)}
+                    inputMode="numeric"
+                    placeholder="Enter year for export title (e.g., 2026)"
+                    value={predictionYear}
+                    onChange={(e) => {
+                      const digitsOnly = e.target.value.replace(/\D/g, "").slice(0, 4);
+                      setPredictionYear(digitsOnly);
+                    }}
                     className="border-gray-300 hover:border-[#94BAEB] focus:border-[#194678]"
                   />
                 </div>
@@ -595,25 +599,77 @@ export default function App() {
                 <div className="space-y-4">
                   <div className="border border-[#94BAEB] rounded-lg overflow-hidden">
                     <div className="bg-[#194678] text-white px-4 py-3">
-                      <h3 className="text-white">Report Results</h3>
+                      <h3 className="text-white">Prediction Results</h3>
                     </div>
+
                     <div className="p-4 max-h-96 overflow-auto">
-                      <div>
-                        <h4 className="font-semibold mb-2">Raw Response</h4>
-                        {rawText ? (
-                          <pre className="bg-gray-100 p-2 rounded text-xs overflow-auto max-h-64">
-                            {rawText}
-                          </pre>
-                        ) : rawResponse ? (
-                          <pre className="bg-gray-100 p-2 rounded text-xs overflow-auto max-h-64">
-                            {JSON.stringify(rawResponse, null, 2)}
-                          </pre>
-                        ) : (
-                          <div className="text-sm text-gray-500">
-                            No response captured yet
-                          </div>
-                        )}
-                      </div>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead
+                              className="cursor-pointer hover:bg-gray-50"
+                              onClick={() => handleSort("deptName")}
+                            >
+                              <div className="flex items-center">
+                                Department
+                                <SortIcon column="deptName" />
+                              </div>
+                            </TableHead>
+
+                            <TableHead
+                              className="cursor-pointer hover:bg-gray-50"
+                              onClick={() => handleSort("subj")}
+                            >
+                              <div className="flex items-center">
+                                Subj
+                                <SortIcon column="subj" />
+                              </div>
+                            </TableHead>
+
+                            <TableHead
+                              className="cursor-pointer hover:bg-gray-50"
+                              onClick={() => handleSort("crse")}
+                            >
+                              <div className="flex items-center">
+                                Crse
+                                <SortIcon column="crse" />
+                              </div>
+                            </TableHead>
+
+                            <TableHead
+                              className="cursor-pointer hover:bg-gray-50"
+                              onClick={() => handleSort("credits")}
+                            >
+                              <div className="flex items-center">
+                                Credits
+                                <SortIcon column="credits" />
+                              </div>
+                            </TableHead>
+
+                            <TableHead
+                              className="cursor-pointer hover:bg-gray-50"
+                              onClick={() => handleSort("prediction")}
+                            >
+                              <div className="flex items-center">
+                                Prediction
+                                <SortIcon column="prediction" />
+                              </div>
+                            </TableHead>
+                          </TableRow>
+                        </TableHeader>
+
+                        <TableBody>
+                          {sortedResults.map((row) => (
+                            <TableRow key={row.id}>
+                              <TableCell>{row.deptName}</TableCell>
+                              <TableCell className="font-mono">{row.subj}</TableCell>
+                              <TableCell className="font-mono">{row.crse}</TableCell>
+                              <TableCell>{Number.isFinite(row.credits) ? row.credits.toFixed(2) : row.credits}</TableCell>
+                              <TableCell>{Number.isFinite(row.prediction) ? row.prediction.toFixed(2) : row.prediction}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
                     </div>
                   </div>
 
