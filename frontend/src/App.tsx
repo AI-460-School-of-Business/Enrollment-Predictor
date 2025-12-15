@@ -427,7 +427,7 @@ export default function App() {
 
   const sortedResults = getSortedResults();
 
-      const handleTrainModel = async () => {
+  const handleTrainModel = async () => {
     // Framework only, no training logic yet
     console.log("Train Model clicked");
     console.log("Training files:", trainingFile);
