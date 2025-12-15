@@ -210,6 +210,11 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Train Model
+  const [isTraining, setIsTraining] = useState(false);
+  const [trainingError, setTrainingError] = useState<string | null>(null);
+
+
   useEffect(() => {
     const fetchSemesters = async () => {
       setIsLoadingSemesters(true);
@@ -373,6 +378,26 @@ export default function App() {
       setShowResults(false);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+    const handleTrainModel = async () => {
+    // Framework only, no training logic yet
+    console.log("Train Model clicked");
+    console.log("Training files:", trainingFile);
+    console.log("Selected semesters:", selectedSemesters);
+
+    setIsTraining(true);
+    setTrainingError(null);
+
+    try {
+      // TODO: add training logic here 
+
+    } catch (err) {
+      console.error("Error training model:", err);
+      setTrainingError(err instanceof Error ? err.message : "Unknown training error");
+    } finally {
+      setIsTraining(false);
     }
   };
 
@@ -738,12 +763,21 @@ export default function App() {
                 {/* Train Model Button */}
                 <div className="flex justify-center">
                   <Button
+                    onClick={handleTrainModel}
                     className="bg-[#194678] hover:bg-[#194678]/90 text-white px-8 py-6"
-                    disabled={!trainingFile}
+                    disabled={isTraining || trainingFile.length === 0}
                   >
-                    Train Model
+                    {isTraining ? "Training..." : "Train Model"}
                   </Button>
                 </div>
+
+                {/* Optional error display (framework) */}
+                {trainingError && (
+                  <div className="text-red-600 text-sm border border-red-300 bg-red-50 px-4 py-2 rounded">
+                    Error: {trainingError}
+                  </div>
+                )}
+
               </div>
             </TabsContent>
           </Tabs>
