@@ -427,6 +427,10 @@ export default function App() {
 
   const sortedResults = getSortedResults();
 
+  const handleExportResults = () => {
+    // TODO: Add export logic
+  };
+
   const handleTrainModel = async () => {
     // Framework only, no training logic yet
     console.log("Train Model clicked");
@@ -589,7 +593,7 @@ export default function App() {
                   <Input
                     type="text"
                     inputMode="numeric"
-                    placeholder="Enter year for export title (e.g., 2026)"
+                    placeholder="Enter prediction year"
                     value={predictionYear}
                     onChange={(e) => {
                       const digitsOnly = e.target.value.replace(/\D/g, "").slice(0, 4);
@@ -700,8 +704,10 @@ export default function App() {
                   {/* Export Button (all rows by default) */}
                   <div className="flex justify-end">
                     <Button
+                      onClick={handleExportResults}
                       variant="outline"
                       className="border-[#194678] text-[#194678] hover:bg-[#C2D8FF]/20"
+                      disabled={results.length === 0}
                     >
                       <Download className="w-4 h-4 mr-2" />
                       Export
