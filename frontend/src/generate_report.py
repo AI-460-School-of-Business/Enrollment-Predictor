@@ -309,6 +309,17 @@ class EnrollmentReportGenerator:
         return course_str or None
 
     @staticmethod
+    def _course_number_sort_key(course_value: Any) -> float:
+        """Extract numeric portion for sorting course identifiers."""
+        normalized = EnrollmentReportGenerator._normalize_course_number(course_value)
+        if not normalized:
+            return float('inf')
+        digits = ''.join(ch for ch in str(normalized) if ch.isdigit())
+        if digits:
+            return int(digits)
+        return float('inf')
+
+    @staticmethod
     def _extract_year_from_term(term_value: Any) -> Optional[int]:
         try:
             term_int = int(float(term_value))
@@ -697,6 +708,13 @@ class EnrollmentReportGenerator:
                 row += 1
 
                 courses = group_df[['Course', 'Subject']].drop_duplicates()
+                courses = (
+                    courses.assign(
+                        _course_sort=courses['Course'].apply(self._course_number_sort_key)
+                    )
+                    .sort_values(by=['_course_sort', 'Course'])
+                    .drop(columns='_course_sort')
+                )
 
                 for _, course_row_data in courses.iterrows():
                     subj_code = self._normalize_subject_code(course_row_data['Subject'])
