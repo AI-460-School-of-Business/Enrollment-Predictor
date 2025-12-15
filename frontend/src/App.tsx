@@ -381,26 +381,6 @@ export default function App() {
     }
   };
 
-    const handleTrainModel = async () => {
-    // Framework only, no training logic yet
-    console.log("Train Model clicked");
-    console.log("Training files:", trainingFile);
-    console.log("Selected semesters:", selectedSemesters);
-
-    setIsTraining(true);
-    setTrainingError(null);
-
-    try {
-      // TODO: add training logic here 
-
-    } catch (err) {
-      console.error("Error training model:", err);
-      setTrainingError(err instanceof Error ? err.message : "Unknown training error");
-    } finally {
-      setIsTraining(false);
-    }
-  };
-
   const handleSort = (column: SortColumn) => {
     if (sortColumn === column) {
       // Toggle direction
@@ -445,8 +425,27 @@ export default function App() {
     );
   };
 
-
   const sortedResults = getSortedResults();
+
+      const handleTrainModel = async () => {
+    // Framework only, no training logic yet
+    console.log("Train Model clicked");
+    console.log("Training files:", trainingFile);
+    console.log("Selected semesters:", selectedSemesters);
+
+    setIsTraining(true);
+    setTrainingError(null);
+
+    try {
+      // TODO: add training logic here 
+
+    } catch (err) {
+      console.error("Error training model:", err);
+      setTrainingError(err instanceof Error ? err.message : "Unknown training error");
+    } finally {
+      setIsTraining(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#C2D8FF]/30 to-white">
