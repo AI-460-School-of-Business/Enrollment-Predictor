@@ -1,4 +1,21 @@
-import { useState, useEffect } from "react";
+/**
+ * App.tsx
+ * -----------------------------------------------------------------------------
+ * Course Sense: Enrollment Forecaster UI
+ *
+ * Responsibilities:
+ * - Fetch reference data (semesters, departments) from the backend.
+ * - Allow users to generate enrollment predictions via SQL-based prediction endpoint.
+ * - Display sortable results and provide an export button hook.
+ * - Provide a training tab with file upload + semester selection + "Train Model" hook.
+ *
+ * Notes:
+ * - This file intentionally contains "framework-only" handlers for export + training.
+ * - Consider extracting large UI sections into smaller components as this grows.
+ */
+
+import { useEffect, useMemo, useState } from "react";
+
 import { FileUpload } from "./components/FileUpload";
 import { Button } from "./components/ui/button";
 import { Input } from "./components/ui/input";
@@ -17,44 +34,43 @@ import {
   TableHeader,
   TableRow,
 } from "./components/ui/table";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "./components/ui/dropdown-menu";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui/tabs";
 import { Checkbox } from "./components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "./components/ui/popover";
-import {
-  Download,
-  ArrowUpDown,
-  ArrowUp,
-  ArrowDown,
-  ChevronDown,
-} from "lucide-react";
+
+import { Download, ArrowUpDown, ArrowUp, ArrowDown, ChevronDown } from "lucide-react";
 
 import subjectDepartmentMap from "./subjectDepartmentMap.json";
 
+/** Subject → Department name mapping (e.g., "FIN" → "Finance"). */
 const SUBJECT_DEPT_MAP = subjectDepartmentMap as Record<string, string>;
 
+/**
+ * Base URL for backend API.
+ * - For Docker, set VITE_API_URL in env
+ * - For local dev, fallback to localhost
+ */
+const API_BASE_URL =
+  (import.meta as any).env?.VITE_API_URL ?? "http://localhost:5000";
+
+/** UI row for the prediction table. */
 interface ResultRow {
+  /** Stable unique id for React keys. */
   id: string;
-  deptName: string;   // mapped readable name
-  subj: string;       // actual subj code
+  /** Human-readable department name from SUBJECT_DEPT_MAP. */
+  deptName: string;
+  /** Subject code (e.g., FIN). */
+  subj: string;
+  /** Course number (e.g., 330). */
   crse: number;
+  /** Average credits across sections in the aggregate query. */
   credits: number;
+  /** Model prediction result (expected enrollment). */
   prediction: number;
 }
 
-type SortColumn =
-  | "deptName"
-  | "subj"
-  | "crse"
-  | "credits"
-  | "prediction";
-
-  type SortDirection = "asc" | "desc";
+type SortColumn = "deptName" | "subj" | "crse" | "credits" | "prediction";
+type SortDirection = "asc" | "desc";
 
 interface SemesterOption {
   term: number;
@@ -66,9 +82,15 @@ interface DepartmentOption {
   name: string;
 }
 
+type PredictionSeason = "spring" | "fall";
+
+/**
+ * Multi-select semester picker used in the Training tab.
+ * Stores `term_desc` strings as the selection value (matches your current usage).
+ */
 interface SemesterSelectorProps {
   allSemesters: SemesterOption[];
-  selectedSemesters: string[];          // we store the selected term_desc strings
+  selectedSemesters: string[]; // stored as term_desc strings
   onSelectionChange: (semesters: string[]) => void;
   isLoading?: boolean;
   error?: string | null;
@@ -81,40 +103,42 @@ function SemesterSelector({
   isLoading,
   error,
 }: SemesterSelectorProps) {
+  /** Toggle a single semester term_desc in/out of the selection. */
   const handleToggle = (termDesc: string) => {
     if (selectedSemesters.includes(termDesc)) {
       onSelectionChange(selectedSemesters.filter((s) => s !== termDesc));
-    } else {
-      onSelectionChange([...selectedSemesters, termDesc]);
+      return;
     }
+    onSelectionChange([...selectedSemesters, termDesc]);
   };
 
-  // convenience values
+  // Convenience values for the "Select all" row
   const totalCount = allSemesters.length;
   const selectedCount = selectedSemesters.length;
   const allSelected = totalCount > 0 && selectedCount === totalCount;
   const partiallySelected = selectedCount > 0 && selectedCount < totalCount;
 
+  /** Toggle all semesters on/off. */
   const toggleSelectAll = () => {
     if (allSelected) {
       onSelectionChange([]); // clear all
-    } else {
-      onSelectionChange(allSemesters.map((s) => s.term_desc)); // select all
+      return;
     }
+    onSelectionChange(allSemesters.map((s) => s.term_desc)); // select all
   };
 
+  /** Button label state for the Popover trigger. */
   const buttonLabel = (() => {
     if (isLoading) return "Loading semesters...";
     if (error) return "Error loading semesters";
-    if (selectedSemesters.length > 0) {
-      return `${selectedSemesters.length} selected`;
-    }
+    if (selectedSemesters.length > 0) return `${selectedSemesters.length} selected`;
     return "Select semesters";
   })();
 
   return (
     <div className="space-y-2">
       <label className="text-sm">Select Training Semesters</label>
+
       <Popover>
         <PopoverTrigger asChild>
           <Button
@@ -174,47 +198,69 @@ function SemesterSelector({
   );
 }
 
-// For Docker, set VITE_API_URL in env; for local dev, fallback to localhost
-const API_BASE_URL =
-  (import.meta as any).env?.VITE_API_URL ?? "http://localhost:5000";
-
+/**
+ * App Component
+ * -----------------------------------------------------------------------------
+ * Provides two main tabs:
+ * - Prediction: uploads a model file + filters + generates predictions (SQL-based)
+ * - Training: uploads training data + chooses semesters + trains a model (framework)
+ */
 export default function App() {
-  const [files1, setFiles1] = useState<File[]>([]);
-  const [trainingFile, setTrainingFile] = useState<File[]>([]);
+  // -----------------------------
+  // Upload State
+  // -----------------------------
+  const [modelFiles, setModelFiles] = useState<File[]>([]);
+  const [trainingFiles, setTrainingFiles] = useState<File[]>([]);
+
+  // -----------------------------
+  // Prediction Form State
+  // -----------------------------
   const [model, setModel] = useState<string>("");
+  const [departmentFilter, setDepartmentFilter] = useState<string>("");
+  const [predictionSeason, setPredictionSeason] = useState<PredictionSeason>("spring");
+  const [predictionYear, setPredictionYear] = useState<string>("2026");
+
+  // -----------------------------
+  // Training Form State
+  // -----------------------------
   const [selectedSemesters, setSelectedSemesters] = useState<string[]>([]);
 
+  // -----------------------------
+  // Reference Data State
+  // -----------------------------
   const [semesterOptions, setSemesterOptions] = useState<SemesterOption[]>([]);
   const [isLoadingSemesters, setIsLoadingSemesters] = useState(false);
   const [semestersError, setSemestersError] = useState<string | null>(null);
 
-  const [crnFilter, setCrnFilter] = useState("");
-  const [departmentFilter, setDepartmentFilter] = useState<string>("");
   const [departments, setDepartments] = useState<DepartmentOption[]>([]);
   const [isLoadingDepartments, setIsLoadingDepartments] = useState(false);
   const [departmentsError, setDepartmentsError] = useState<string | null>(null);
 
-  type PredictionSeason = "spring" | "fall";
-
-  const [predictionYear, setPredictionYear] = useState<string>("2026"); // default year as string
-  const [predictionSeason, setPredictionSeason] = useState<PredictionSeason>("spring");
-  // Prediction term (term to predict enrollment for) - default 202640
-
+  // -----------------------------
+  // Results State
+  // -----------------------------
   const [results, setResults] = useState<ResultRow[]>([]);
-  const [columns, setColumns] = useState<string[]>([]);
-  const [rawResponse, setRawResponse] = useState<any>(null);
-  const [rawText, setRawText] = useState<string | null>(null);
   const [showResults, setShowResults] = useState(false);
+
+  // Sorting
   const [sortColumn, setSortColumn] = useState<SortColumn | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
-  const [isLoading, setIsLoading] = useState(false);
+
+  // Prediction request state
+  const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Train Model
+  // Training request state
   const [isTraining, setIsTraining] = useState(false);
   const [trainingError, setTrainingError] = useState<string | null>(null);
 
+  // Debug / diagnostics (optional)
+  const [rawResponse, setRawResponse] = useState<any>(null);
+  const [rawText, setRawText] = useState<string | null>(null);
 
+  // -----------------------------
+  // Effects: Fetch reference data
+  // -----------------------------
   useEffect(() => {
     const fetchSemesters = async () => {
       setIsLoadingSemesters(true);
@@ -222,26 +268,19 @@ export default function App() {
 
       try {
         const res = await fetch(`${API_BASE_URL}/api/semesters`);
-        if (!res.ok) {
-          throw new Error(`Server responded with status ${res.status}`);
-        }
+        if (!res.ok) throw new Error(`Server responded with status ${res.status}`);
 
         const data = await res.json();
-        if (!data.ok) {
-          throw new Error(data.error || "Backend returned ok=false");
-        }
+        if (!data.ok) throw new Error(data.error || "Backend returned ok=false");
 
         const semesters = (data.semesters ?? []) as SemesterOption[];
 
-        // Sort by term ascending just to be safe (even though SQL already does)
+        // Sort by term ascending (defensive; SQL likely already sorts)
         semesters.sort((a, b) => a.term - b.term);
-
         setSemesterOptions(semesters);
       } catch (err) {
         console.error("Failed to fetch semesters:", err);
-        setSemestersError(
-          err instanceof Error ? err.message : "Unknown error fetching semesters",
-        );
+        setSemestersError(err instanceof Error ? err.message : "Unknown error fetching semesters");
       } finally {
         setIsLoadingSemesters(false);
       }
@@ -257,14 +296,10 @@ export default function App() {
 
       try {
         const res = await fetch(`${API_BASE_URL}/api/departments`);
-        if (!res.ok) {
-          throw new Error(`Server responded with status ${res.status}`);
-        }
+        if (!res.ok) throw new Error(`Server responded with status ${res.status}`);
 
         const data = await res.json();
-        if (!data.ok) {
-          throw new Error(data.error || "Backend returned ok=false");
-        }
+        if (!data.ok) throw new Error(data.error || "Backend returned ok=false");
 
         const depts = (data.departments ?? []) as DepartmentOption[];
         setDepartments(depts);
@@ -281,118 +316,28 @@ export default function App() {
     fetchDepartments();
   }, []);
 
-  const handleGenerateReport = async () => {
-    console.log("Selected semesters:", selectedSemesters);
-    console.log("Selected department:", departmentFilter || "(none)");
-    console.log("Prediction season:", predictionSeason);
-    console.log("Prediction year (export label):", predictionYear);
-
-
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      // Build aggregated SQL query for predictions
-      // Group by term, subj, crse and sum enrollment across sections
-      // Build aggregated SQL query for predictions
-      const termSuffix = predictionSeason === "spring" ? "40" : "10";
-
-      let sql = `
-        SELECT term, subj, crse, SUM(act) AS act, AVG(credits) AS credits
-        FROM section_detail_report_sbussection_detail_report_sbus
-        WHERE RIGHT(term::text, 2) = '${termSuffix}'
-      `;
-
-      // Apply department filter BEFORE GROUP BY
-      if (departmentFilter) {
-        sql += ` AND subj = '${departmentFilter}'`;
-      }
-
-      sql += `
-        GROUP BY term, subj, crse
-        LIMIT 200
-      `;
-
-      console.log("Generated SQL:", sql);
-
-      // Build prediction payload
-      const payload = {
-        sql: sql,
-        model_prefix: "enrollment_tree_min_",
-        features: "min",
-      };
-
-      // Call prediction endpoint
-      const response = await fetch(`${API_BASE_URL}/api/predict/sql`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Server responded with status ${response.status}`);
-      }
-
-      const text = await response.text();
-      console.log("Raw response text:", text);
-      setRawText(text);
-
-      let json: any;
-      try {
-        json = JSON.parse(text);
-      } catch (err) {
-        console.error("Failed to parse JSON from response text", err);
-        throw new Error("Backend did not return valid JSON");
-      }
-
-      console.log("Parsed prediction response:", json);
-      setRawResponse(json);
-
-      if (json.error) {
-        throw new Error(json.error);
-      }
-
-        const rows = Array.isArray(json) ? json : [];
-
-        const mapped: ResultRow[] = rows.map((r: any) => {
-          const subjCode = String(r.subj ?? "").trim().toUpperCase();
-          const deptName = SUBJECT_DEPT_MAP[subjCode] ?? subjCode;
-
-          return {
-            id: `${r.term}-${subjCode}-${r.crse}`,  // stable unique id
-            deptName,
-            subj: subjCode,
-            crse: Number(r.crse),
-            credits: Number(r.credits),
-            prediction: Number(r.prediction),
-          };
-        });
-
-        setResults(mapped);
-        setShowResults(true);
-
-      setShowResults(true);
-    } catch (err) {
-      console.error("Error generating predictions:", err);
-      setError(err instanceof Error ? err.message : "An unknown error occurred.");
-      setShowResults(false);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
+  // -----------------------------
+  // Helpers: Sorting
+  // -----------------------------
+  /**
+   * Handle sort state transitions:
+   * - If clicking same column: toggle direction.
+   * - If clicking new column: set it and default direction to "desc".
+   */
   const handleSort = (column: SortColumn) => {
     if (sortColumn === column) {
-      // Toggle direction
-      setSortDirection(sortDirection === "desc" ? "asc" : "desc");
-    } else {
-      // New column, default to descending
-      setSortColumn(column);
-      setSortDirection("desc");
+      setSortDirection((prev) => (prev === "desc" ? "asc" : "desc"));
+      return;
     }
+    setSortColumn(column);
+    setSortDirection("desc");
   };
 
-  const getSortedResults = () => {
+  /**
+   * Compute sorted rows.
+   * useMemo keeps render work low when results are large.
+   */
+  const sortedResults = useMemo(() => {
     if (!sortColumn) return results;
 
     return [...results].sort((a, b) => {
@@ -412,12 +357,14 @@ export default function App() {
         ? bStr.localeCompare(aStr)
         : aStr.localeCompare(bStr);
     });
-  };
+  }, [results, sortColumn, sortDirection]);
 
+  /**
+   * Sort icon helper for table headers.
+   * Defined inline for readability; could be extracted to its own component.
+   */
   const SortIcon = ({ column }: { column: SortColumn }) => {
-    if (sortColumn !== column) {
-      return <ArrowUpDown className="w-4 h-4 ml-1 opacity-50" />;
-    }
+    if (sortColumn !== column) return <ArrowUpDown className="w-4 h-4 ml-1 opacity-50" />;
     return sortDirection === "desc" ? (
       <ArrowDown className="w-4 h-4 ml-1" />
     ) : (
@@ -425,24 +372,141 @@ export default function App() {
     );
   };
 
-  const sortedResults = getSortedResults();
+  // -----------------------------
+  // Actions: Prediction
+  // -----------------------------
+  /**
+   * Generate prediction report:
+   * - Builds an aggregate SQL query (term/subj/crse)
+   * - Sends it to /api/predict/sql
+   * - Maps the response into ResultRow[]
+   */
+  const handleGenerateReport = async () => {
+    console.log("Selected department:", departmentFilter || "(none)");
+    console.log("Prediction season:", predictionSeason);
+    console.log("Prediction year (export label):", predictionYear);
 
-  const handleExportResults = () => {
-    // TODO: Add export logic
+    setIsGenerating(true);
+    setError(null);
+
+    try {
+      /**
+       * Term suffix logic:
+       * - Your DB appears to use term codes ending in:
+       *   - "40" = Spring
+       *   - "10" = Fall
+       */
+      const termSuffix = predictionSeason === "spring" ? "40" : "10";
+
+      // Base SQL aggregation
+      let sql = `
+        SELECT term, subj, crse, SUM(act) AS act, AVG(credits) AS credits
+        FROM section_detail_report_sbussection_detail_report_sbus
+        WHERE RIGHT(term::text, 2) = '${termSuffix}'
+      `;
+
+      // Apply department filter before GROUP BY
+      if (departmentFilter) {
+        sql += ` AND subj = '${departmentFilter}'`;
+      }
+
+      sql += `
+        GROUP BY term, subj, crse
+        LIMIT 200
+      `;
+
+      console.log("Generated SQL:", sql);
+
+      const payload = {
+        sql,
+        model_prefix: "enrollment_tree_min_",
+        features: "min",
+      };
+
+      const response = await fetch(`${API_BASE_URL}/api/predict/sql`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) throw new Error(`Server responded with status ${response.status}`);
+
+      const text = await response.text();
+      setRawText(text);
+
+      let json: any;
+      try {
+        json = JSON.parse(text);
+      } catch (parseErr) {
+        console.error("Failed to parse JSON from response text", parseErr);
+        throw new Error("Backend did not return valid JSON");
+      }
+
+      setRawResponse(json);
+
+      // If backend uses { error: "..."} shape sometimes
+      if (json?.error) throw new Error(json.error);
+
+      const rows = Array.isArray(json) ? json : [];
+
+      const mapped: ResultRow[] = rows.map((r: any) => {
+        const subjCode = String(r.subj ?? "").trim().toUpperCase();
+        const deptName = SUBJECT_DEPT_MAP[subjCode] ?? subjCode;
+
+        return {
+          id: `${r.term}-${subjCode}-${r.crse}`, // stable unique id
+          deptName,
+          subj: subjCode,
+          crse: Number(r.crse),
+          credits: Number(r.credits),
+          prediction: Number(r.prediction),
+        };
+      });
+
+      setResults(mapped);
+      setShowResults(true);
+    } catch (err) {
+      console.error("Error generating predictions:", err);
+      setError(err instanceof Error ? err.message : "An unknown error occurred.");
+      setShowResults(false);
+      setResults([]);
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
+  // -----------------------------
+  // Actions: Export (framework)
+  // -----------------------------
+  /**
+   * Export handler (framework-only).
+   * Implement CSV/XLSX export here, likely based on `results` or `sortedResults`.
+   */
+  const handleExportResults = () => {
+    // TODO: Add export logic (CSV/XLSX)
+    console.log("Export clicked. Rows:", results.length);
+  };
+
+  // -----------------------------
+  // Actions: Training (framework)
+  // -----------------------------
+  /**
+   * Train model handler (framework-only).
+   * Suggested future implementation:
+   * - Build FormData with training files + semester selection
+   * - POST to `/api/train` (or similar)
+   * - Show status + store returned model artifact reference
+   */
   const handleTrainModel = async () => {
-    // Framework only, no training logic yet
     console.log("Train Model clicked");
-    console.log("Training files:", trainingFile);
+    console.log("Training files:", trainingFiles);
     console.log("Selected semesters:", selectedSemesters);
 
     setIsTraining(true);
     setTrainingError(null);
 
     try {
-      // TODO: add training logic here 
-
+      // TODO: add training logic here
     } catch (err) {
       console.error("Error training model:", err);
       setTrainingError(err instanceof Error ? err.message : "Unknown training error");
@@ -451,22 +515,23 @@ export default function App() {
     }
   };
 
+  // -----------------------------
+  // Render
+  // -----------------------------
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#C2D8FF]/30 to-white">
       <div className="max-w-6xl mx-auto px-6 py-6">
+        {/* Header */}
         <div className="w-full mb-6 flex items-center justify-between gap-8">
           {/* Logo */}
           <div className="w-64 h-64 flex items-center justify-start">
             <img className="object-contain" src="CCSU_Logo.svg" alt="SOB Logo" />
           </div>
 
-          {/* Title Block 1 */}
+          {/* Title Block */}
           <div className="w-64 h-64 flex items-center justify-center">
             <div className="text-center">
-              <div
-                className="text-[#194678]"
-                style={{ fontSize: "2rem", fontWeight: 800 }}
-              >
+              <div className="text-[#194678]" style={{ fontSize: "2rem", fontWeight: 800 }}>
                 Course Sense
               </div>
               <p className="text-[#194678]/70 text-lg font-medium">
@@ -475,13 +540,13 @@ export default function App() {
             </div>
           </div>
 
-          {/* Title Block 2 */}
+          {/* Placeholder (for symmetry / future content) */}
           <div className="w-64 h-64 flex items-center justify-center">
-            <div className="text-center">{/*Blank for now*/}</div>
+            <div className="text-center">{/* Blank for now */}</div>
           </div>
         </div>
 
-        {/* Main Content with Tabs */}
+        {/* Main Content */}
         <div className="bg-white rounded-lg shadow-lg p-8 border-t-4 border-[#194678]">
           <Tabs defaultValue="prediction" className="w-full">
             <TabsList className="grid w-full grid-cols-2 mb-6">
@@ -499,21 +564,20 @@ export default function App() {
               </TabsTrigger>
             </TabsList>
 
+            {/* ------------------------ Prediction Tab ------------------------ */}
             <TabsContent value="prediction" className="space-y-6">
-              {/* File Uploads */}
-              <div>
-                <FileUpload
-                  label="Upload Model"
-                  onFileChange={setFiles1}
-                  description={"Upload .pkl file."}
-                  acceptedExtensions={[".pkl"]}
-                  limitUpload={true}
-                />
-              </div>
+              {/* Upload Model */}
+              <FileUpload
+                label="Upload Model"
+                onFileChange={setModelFiles}
+                description="Upload .pkl file."
+                acceptedExtensions={[".pkl"]}
+                limitUpload={true}
+              />
 
-              {/* Dropdowns and Filters */}
+              {/* Dropdowns */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Model Select */}
+                {/* Model Select (placeholder - not wired into backend payload yet) */}
                 <div className="space-y-2">
                   <label className="text-sm">Model Select</label>
                   <Select value={model} onValueChange={setModel}>
@@ -534,9 +598,7 @@ export default function App() {
                     value={departmentFilter}
                     onValueChange={setDepartmentFilter}
                     disabled={
-                      isLoadingDepartments ||
-                      !!departmentsError ||
-                      departments.length === 0
+                      isLoadingDepartments || !!departmentsError || departments.length === 0
                     }
                   >
                     <SelectTrigger className="border-gray-300 hover:border-[#94BAEB]">
@@ -556,18 +618,18 @@ export default function App() {
                           {dept.name}
                         </SelectItem>
                       ))}
-                      {!isLoadingDepartments &&
-                        !departmentsError &&
-                        departments.length === 0 && (
-                          <div className="px-2 py-1 text-xs text-gray-500">
-                            No departments found.
-                          </div>
-                        )}
+
+                      {!isLoadingDepartments && !departmentsError && departments.length === 0 && (
+                        <div className="px-2 py-1 text-xs text-gray-500">
+                          No departments found.
+                        </div>
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
               </div>
 
+              {/* Term Inputs */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Semester Select */}
                 <div className="space-y-2">
@@ -586,8 +648,7 @@ export default function App() {
                   </Select>
                 </div>
 
-
-                {/* Year Select */}
+                {/* Year Input */}
                 <div className="space-y-2">
                   <label className="text-sm">Enter Prediction Year</label>
                   <Input
@@ -596,6 +657,7 @@ export default function App() {
                     placeholder="Enter prediction year"
                     value={predictionYear}
                     onChange={(e) => {
+                      // Keep only up to 4 digits
                       const digitsOnly = e.target.value.replace(/\D/g, "").slice(0, 4);
                       setPredictionYear(digitsOnly);
                     }}
@@ -604,7 +666,7 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Error message */}
+              {/* Error Message */}
               {error && (
                 <div className="text-red-600 text-sm border border-red-300 bg-red-50 px-4 py-2 rounded">
                   Error: {error}
@@ -616,13 +678,13 @@ export default function App() {
                 <Button
                   onClick={handleGenerateReport}
                   className="bg-[#194678] hover:bg-[#194678]/90 text-white px-8 py-6"
-                  disabled={isLoading}
+                  disabled={isGenerating}
                 >
-                  {isLoading ? "Generating..." : "Generate Report"}
+                  {isGenerating ? "Generating..." : "Generate Report"}
                 </Button>
               </div>
 
-              {/* Results Section */}
+              {/* Results */}
               {showResults && (
                 <div className="space-y-4">
                   <div className="border border-[#94BAEB] rounded-lg overflow-hidden">
@@ -639,8 +701,7 @@ export default function App() {
                               onClick={() => handleSort("deptName")}
                             >
                               <div className="flex items-center">
-                                Department
-                                <SortIcon column="deptName" />
+                                Department <SortIcon column="deptName" />
                               </div>
                             </TableHead>
 
@@ -649,8 +710,7 @@ export default function App() {
                               onClick={() => handleSort("subj")}
                             >
                               <div className="flex items-center">
-                                Subj
-                                <SortIcon column="subj" />
+                                Subj <SortIcon column="subj" />
                               </div>
                             </TableHead>
 
@@ -659,8 +719,7 @@ export default function App() {
                               onClick={() => handleSort("crse")}
                             >
                               <div className="flex items-center">
-                                Crse
-                                <SortIcon column="crse" />
+                                Crse <SortIcon column="crse" />
                               </div>
                             </TableHead>
 
@@ -669,8 +728,7 @@ export default function App() {
                               onClick={() => handleSort("credits")}
                             >
                               <div className="flex items-center">
-                                Credits
-                                <SortIcon column="credits" />
+                                Credits <SortIcon column="credits" />
                               </div>
                             </TableHead>
 
@@ -679,8 +737,7 @@ export default function App() {
                               onClick={() => handleSort("prediction")}
                             >
                               <div className="flex items-center">
-                                Prediction
-                                <SortIcon column="prediction" />
+                                Prediction <SortIcon column="prediction" />
                               </div>
                             </TableHead>
                           </TableRow>
@@ -692,8 +749,16 @@ export default function App() {
                               <TableCell>{row.deptName}</TableCell>
                               <TableCell className="font-mono">{row.subj}</TableCell>
                               <TableCell className="font-mono">{row.crse}</TableCell>
-                              <TableCell>{Number.isFinite(row.credits) ? row.credits.toFixed(2) : row.credits}</TableCell>
-                              <TableCell>{Number.isFinite(row.prediction) ? row.prediction.toFixed(2) : row.prediction}</TableCell>
+                              <TableCell>
+                                {Number.isFinite(row.credits)
+                                  ? row.credits.toFixed(2)
+                                  : row.credits}
+                              </TableCell>
+                              <TableCell>
+                                {Number.isFinite(row.prediction)
+                                  ? row.prediction.toFixed(2)
+                                  : row.prediction}
+                              </TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
@@ -701,7 +766,7 @@ export default function App() {
                     </div>
                   </div>
 
-                  {/* Export Button (all rows by default) */}
+                  {/* Export */}
                   <div className="flex justify-end">
                     <Button
                       onClick={handleExportResults}
@@ -717,6 +782,7 @@ export default function App() {
               )}
             </TabsContent>
 
+            {/* ------------------------ Training Tab ------------------------ */}
             <TabsContent value="training" className="py-8">
               <div className="space-y-6">
                 {/* Schema Information */}
@@ -724,39 +790,35 @@ export default function App() {
                   <div className="bg-[#194678] text-white px-4 py-3">
                     <h3 className="text-white">Schema Information</h3>
                   </div>
+
                   <div className="p-6 space-y-6">
                     <div className="bg-[#C2D8FF]/20 rounded-md p-4 space-y-3">
-                      {/* Feature Description */}
                       <div className="py-2">
                         <p className="text-md mb-1">Feature Description:</p>
                         <p className="text-sm">Text here...</p>
                       </div>
-                      {/* Required Fields */}
+
                       <div className="py-2">
                         <p className="text-md mb-1">Required Fields:</p>
                         <p className="text-sm">
-                          Term, Term Desc, CRN, Subj, Crse, Sec, Credits, Title,
-                          Act, XL Act
+                          Term, Term Desc, CRN, Subj, Crse, Sec, Credits, Title, Act,
+                          XL Act
                         </p>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                {/* File Upload for Training Data */}
-                <div>
-                  <FileUpload
-                    label="Upload Training Data"
-                    onFileChange={setTrainingFile}
-                    description={
-                      "Term, Term Desc, CRN, Subj, Crse, Sec, Credits, Title, Act, XL Act"
-                    }
-                    acceptedExtensions={[".csv", ".xlsx"]}
-                    limitUpload={false}
-                  />
-                </div>
+                {/* Training File Upload */}
+                <FileUpload
+                  label="Upload Training Data"
+                  onFileChange={setTrainingFiles}
+                  description="Term, Term Desc, CRN, Subj, Crse, Sec, Credits, Title, Act, XL Act"
+                  acceptedExtensions={[".csv", ".xlsx"]}
+                  limitUpload={false}
+                />
 
-                {/* Semesters */}
+                {/* Semester Multi-Select */}
                 <SemesterSelector
                   allSemesters={semesterOptions}
                   selectedSemesters={selectedSemesters}
@@ -765,27 +827,33 @@ export default function App() {
                   error={semestersError}
                 />
 
-                {/* Train Model Button */}
+                {/* Train Button */}
                 <div className="flex justify-center">
                   <Button
                     onClick={handleTrainModel}
                     className="bg-[#194678] hover:bg-[#194678]/90 text-white px-8 py-6"
-                    disabled={isTraining || trainingFile.length === 0}
+                    disabled={isTraining || trainingFiles.length === 0}
                   >
                     {isTraining ? "Training..." : "Train Model"}
                   </Button>
                 </div>
 
-                {/* Optional error display (framework) */}
+                {/* Training error (framework) */}
                 {trainingError && (
                   <div className="text-red-600 text-sm border border-red-300 bg-red-50 px-4 py-2 rounded">
                     Error: {trainingError}
                   </div>
                 )}
-
               </div>
             </TabsContent>
           </Tabs>
+
+          {/* Debug panel (optional): uncomment if needed */}
+          {/* <pre className="mt-6 text-xs bg-gray-50 p-3 rounded border overflow-auto">
+            rawText: {rawText}
+            {"\n\n"}
+            rawResponse: {JSON.stringify(rawResponse, null, 2)}
+          </pre> */}
         </div>
       </div>
     </div>
