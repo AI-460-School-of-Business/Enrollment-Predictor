@@ -316,7 +316,7 @@ export default function App() {
     fetchDepartments();
   }, []);
 
-  // -----------------------------
+  // ----------------------------- 
   // Helpers: Sorting
   // -----------------------------
   /**
@@ -384,44 +384,44 @@ export default function App() {
   const handleGenerateReport = async () => {
     console.log("Selected department:", departmentFilter || "(none)");
     console.log("Prediction season:", predictionSeason);
-    console.log("Prediction year (export label):", predictionYear);
+    console.log("Prediction year:", predictionYear);
 
     setIsGenerating(true);
     setError(null);
 
-    try {
-      /**
-       * Term suffix logic:
-       * - Your DB appears to use term codes ending in:
-       *   - "40" = Spring
-       *   - "10" = Fall
-       */
-      const termSuffix = predictionSeason === "spring" ? "40" : "10";
+  try {
+    /**
+     * 
+     * term / 100 extracts the year portion (YYYY)
+     * This matches the training query exactly
+     * 
+     */
+    const termSuffix = predictionSeason === "spring" ? "40" : "10";
 
-      // Base SQL aggregation
-      let sql = `
-        SELECT term, subj, crse, SUM(act) AS act, AVG(credits) AS credits
-        FROM section_detail_report_sbussection_detail_report_sbus
-        WHERE RIGHT(term::text, 2) = '${termSuffix}'
-      `;
+    let sql = `
+      SELECT term, subj, crse, SUM(act) AS act, AVG(credits) AS credits
+      FROM section_detail_report_sbussection_detail_report_sbus
+      WHERE (term / 100) = 2025 AND RIGHT(term::text, 2) = '${termSuffix}'
+    `;
 
-      // Apply department filter before GROUP BY
-      if (departmentFilter) {
-        sql += ` AND subj = '${departmentFilter}'`;
-      }
+    // Optional department filter
+    if (departmentFilter) {
+      sql += ` AND subj = '${departmentFilter}'`;
+    }
 
-      sql += `
-        GROUP BY term, subj, crse
-        LIMIT 200
-      `;
+    sql += `
+      GROUP BY term, subj, crse
+      HAVING SUM(act) >= 10
+    `;
 
-      console.log("Generated SQL:", sql);
+    console.log("Generated SQL:", sql);
 
-      const payload = {
-        sql,
-        model_prefix: "enrollment_tree_min_",
-        features: "min",
-      };
+    const payload = {
+      sql,
+      model_prefix: "enrollment_tree_min_",
+      features: "min",
+    };
+
 
       const response = await fetch(`${API_BASE_URL}/api/predict/sql`, {
         method: "POST",
