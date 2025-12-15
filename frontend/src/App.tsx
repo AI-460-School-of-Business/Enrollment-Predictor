@@ -14,7 +14,7 @@
  * - Consider extracting large UI sections into smaller components as this grows.
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { FileUpload } from "./components/FileUpload";
 import { Button } from "./components/ui/button";
@@ -215,7 +215,11 @@ export default function App() {
   // -----------------------------
   // Prediction Form State
   // -----------------------------
-  const [model, setModel] = useState<string>("random-forest");
+  const [model, setModel] = useState<string>("");
+  const [modelOptions, setModelOptions] = useState<string[]>([]);
+  const [isLoadingModels, setIsLoadingModels] = useState(false);
+  const [modelError, setModelError] = useState<string | null>(null);
+  const [isUploadingModel, setIsUploadingModel] = useState(false);
   const [departmentFilter, setDepartmentFilter] = useState<string>("");
   const [predictionSeason, setPredictionSeason] = useState<PredictionSeason>("spring");
   const [predictionYear, setPredictionYear] = useState<string>("2026");
@@ -288,6 +292,38 @@ export default function App() {
 
     fetchSemesters();
   }, []);
+
+  const fetchModels = useCallback(async () => {
+    setIsLoadingModels(true);
+    setModelError(null);
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/models`);
+      if (!res.ok) throw new Error(`Server responded with status ${res.status}`);
+
+      const data = await res.json();
+      const filenames = Array.isArray(data.models)
+        ? data.models
+            .map((m: any) => (typeof m === "string" ? m : m?.filename))
+            .filter(Boolean)
+        : [];
+
+      setModelOptions(filenames);
+
+      if (filenames.length > 0) {
+        setModel((current) => current || filenames[0]);
+      }
+    } catch (err) {
+      console.error("Failed to fetch models:", err);
+      setModelError(err instanceof Error ? err.message : "Unknown error fetching models");
+    } finally {
+      setIsLoadingModels(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchModels();
+  }, [fetchModels]);
 
   useEffect(() => {
     const fetchDepartments = async () => {
@@ -372,6 +408,42 @@ export default function App() {
     );
   };
 
+  const handleModelUploadChange = async (files: File[]) => {
+    setModelFiles(files);
+    if (!files.length) return;
+
+    const file = files[0];
+    const formData = new FormData();
+    formData.append("model", file);
+
+    setIsUploadingModel(true);
+    setModelError(null);
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/models`, {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        throw new Error(data?.error || `Server responded with status ${res.status}`);
+      }
+
+      const savedFilename = data?.filename;
+
+      await fetchModels();
+      if (savedFilename) {
+        setModel(savedFilename);
+      }
+    } catch (err) {
+      console.error("Failed to upload model:", err);
+      setModelError(err instanceof Error ? err.message : "Unknown error uploading model");
+    } finally {
+      setIsUploadingModel(false);
+    }
+  };
+
   // -----------------------------
   // Actions: Prediction
   // -----------------------------
@@ -420,7 +492,11 @@ export default function App() {
       sql,
       model_prefix: "enrollment_tree_min_",
       features: "min",
-    };
+    } as Record<string, string>;
+
+    if (model) {
+      payload.model_filename = model;
+    }
 
 
       const response = await fetch(`${API_BASE_URL}/api/predict/sql`, {
@@ -564,32 +640,63 @@ export default function App() {
               </TabsTrigger>
             </TabsList>
 
-            {/* ------------------------ Prediction Tab ------------------------ */}
-            <TabsContent value="prediction" className="space-y-6">
-              {/* Upload Model */}
-              <FileUpload
-                label="Upload Model"
-                onFileChange={setModelFiles}
-                description="Upload .pkl file."
-                acceptedExtensions={[".pkl"]}
-                limitUpload={true}
-              />
+              {/* ------------------------ Prediction Tab ------------------------ */}
+              <TabsContent value="prediction" className="space-y-6">
+                {/* Upload Model */}
+                <FileUpload
+                  label="Upload Model"
+                  onFileChange={handleModelUploadChange}
+                  description="Upload a .pkl model to make it available in the dropdown below."
+                  acceptedExtensions={[".pkl"]}
+                  limitUpload={true}
+                />
 
-              {/* Dropdowns */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Model Select (placeholder - not wired into backend payload yet) */}
-                <div className="space-y-2">
-                  <label className="text-sm">Model Select</label>
-                  <Select value={model} onValueChange={setModel}>
-                    <SelectTrigger className="border-gray-300 hover:border-[#94BAEB]">
-                      <SelectValue placeholder="Select model" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="linear">Linear</SelectItem>
-                      <SelectItem value="random-forest">Random Forest</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                {/* Dropdowns */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Model Select (available .pkl files in container) */}
+                  <div className="space-y-2">
+                    <label className="text-sm">Model Select</label>
+                    <Select
+                      value={model}
+                      onValueChange={setModel}
+                      disabled={isLoadingModels || isUploadingModel || modelOptions.length === 0}
+                    >
+                      <SelectTrigger className="border-gray-300 hover:border-[#94BAEB]">
+                        <SelectValue
+                          placeholder={
+                            isLoadingModels
+                              ? "Loading models..."
+                              : modelError
+                              ? "Error loading models"
+                              : modelOptions.length === 0
+                              ? "No models found"
+                              : "Select model"
+                          }
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {modelOptions.map((filename) => (
+                          <SelectItem key={filename} value={filename}>
+                            {filename}
+                          </SelectItem>
+                        ))}
+
+                        {!isLoadingModels && modelOptions.length === 0 && (
+                          <div className="px-2 py-1 text-xs text-gray-500">No models found.</div>
+                        )}
+                      </SelectContent>
+                    </Select>
+
+                    {(isUploadingModel || isLoadingModels) && (
+                      <p className="text-xs text-gray-500">
+                        {isUploadingModel ? "Uploading model..." : "Loading models..."}
+                      </p>
+                    )}
+
+                    {modelError && (
+                      <p className="text-xs text-red-600">Model error: {modelError}</p>
+                    )}
+                  </div>
 
                 {/* Department Filter */}
                 <div className="space-y-2">

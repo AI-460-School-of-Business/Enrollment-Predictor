@@ -28,6 +28,7 @@ from __future__ import annotations
 import json
 import os
 import pickle
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
 
@@ -36,6 +37,7 @@ import pandas as pd
 import psycopg2
 from flask import Flask, current_app, jsonify, request, send_from_directory
 from flask_cors import CORS
+from werkzeug.utils import secure_filename
 
 from ml.predictor_service import _choose_model_path, predict_with_model
 
@@ -108,6 +110,28 @@ if not SUBJECT_DEPT_MAP:
         "subjectDepartmentMap.json not found or empty. Checked: %s",
         ", ".join(str(p) for p in CANDIDATE_MAP_PATHS),
     )
+
+# --------------------------------------------------------------------------
+# Model storage
+# --------------------------------------------------------------------------
+
+MODEL_DIR = (Path(__file__).resolve().parent.parent / "data" / "prediction_models").resolve()
+MODEL_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def _list_available_models() -> list[dict[str, Any]]:
+    """Return metadata for .pkl models in MODEL_DIR, newest first."""
+    models: list[dict[str, Any]] = []
+    for path in sorted(MODEL_DIR.glob("*.pkl"), key=lambda p: p.stat().st_mtime, reverse=True):
+        stat = path.stat()
+        models.append(
+            {
+                "filename": path.name,
+                "size_bytes": stat.st_size,
+                "modified": datetime.fromtimestamp(stat.st_mtime).isoformat(),
+            }
+        )
+    return models
 
 
 # ------------------------------------------------------------------------------
@@ -265,6 +289,54 @@ def get_semesters():
         if conn:
             conn.close()
 
+# ------------------------------------------------------------------------------
+# Models: list and upload
+# ------------------------------------------------------------------------------
+
+
+@app.route("/api/models", methods=["GET"])
+def list_models():
+    """Return available model files (.pkl) from the prediction_models directory."""
+    try:
+        return jsonify({"ok": True, "models": _list_available_models()})
+    except Exception as exc:
+        current_app.logger.exception("Failed to list models")
+        return jsonify({"ok": False, "error": str(exc), "models": []}), 500
+
+
+@app.route("/api/models", methods=["POST"])
+def upload_model():
+    """
+    Save an uploaded .pkl model into the prediction_models directory.
+
+    Expects multipart/form-data with field name 'model'.
+    """
+    try:
+        if "model" not in request.files:
+            return jsonify({"ok": False, "error": "Missing uploaded file 'model'"}), 400
+
+        file = request.files["model"]
+        if not file or not file.filename:
+            return jsonify({"ok": False, "error": "Empty filename"}), 400
+
+        filename = secure_filename(file.filename)
+        if not filename.lower().endswith(".pkl"):
+            return jsonify({"ok": False, "error": "Only .pkl files are allowed"}), 400
+
+        target = MODEL_DIR / filename
+        if target.exists():
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            target = MODEL_DIR / f"{target.stem}_{timestamp}{target.suffix}"
+            filename = target.name
+
+        file.save(target)
+        models = _list_available_models()
+
+        return jsonify({"ok": True, "filename": filename, "models": models})
+    except Exception as exc:
+        current_app.logger.exception("Failed to upload model")
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
 
 @app.route("/api/departments", methods=["GET"])
 def get_departments():
@@ -358,7 +430,7 @@ def sql_predict(payload: dict[str, Any]) -> list[dict[str, Any]]:
     model_path = payload.get("model_path")
     model_filename = payload.get("model_filename")
     model_prefix = payload.get("model_prefix")
-    model_dir = payload.get("model_dir", "backend/data/prediction_models")
+    model_dir = payload.get("model_dir", str(MODEL_DIR))
     features = payload.get("features", "min")
 
     # --- Choose the model path ---
