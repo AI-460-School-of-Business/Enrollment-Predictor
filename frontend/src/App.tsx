@@ -215,7 +215,7 @@ export default function App() {
   // -----------------------------
   // Prediction Form State
   // -----------------------------
-  const [model, setModel] = useState<string>("");
+  const [model, setModel] = useState<string>("random-forest");
   const [departmentFilter, setDepartmentFilter] = useState<string>("");
   const [predictionSeason, setPredictionSeason] = useState<PredictionSeason>("spring");
   const [predictionYear, setPredictionYear] = useState<string>("2026");
@@ -593,7 +593,7 @@ export default function App() {
 
                 {/* Department Filter */}
                 <div className="space-y-2">
-                  <label className="text-sm">Filter by Department</label>
+                  <label className="text-sm">Filter by Department (Optional)</label>
                   <Select
                     value={departmentFilter}
                     onValueChange={setDepartmentFilter}
