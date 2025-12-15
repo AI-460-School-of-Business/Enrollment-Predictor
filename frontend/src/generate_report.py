@@ -10,15 +10,27 @@ Generates comprehensive Excel reports with:
 import pandas as pd
 import numpy as np
 import openpyxl
+import psycopg2
+from psycopg2 import sql
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.chart import BarChart, LineChart, PieChart, Reference
 from openpyxl.utils.dataframe import dataframe_to_rows
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Tuple
 import os
 import sys
 import json
+
+
+DB_CONFIG = {
+    # Mirrors backend/app/database/db_init.py defaults so we hit the same database
+    "host": os.getenv("DB_HOST", "db"),
+    "port": int(os.getenv("DB_PORT", 5432)),
+    "user": os.getenv("POSTGRES_USER", "postgres"),
+    "password": os.getenv("POSTGRES_PASSWORD", ""),
+    "database": os.getenv("POSTGRES_DB", "postgres"),
+}
 
 
 def load_predictions_from_json(json_data: List[Dict[str, Any]]) -> pd.DataFrame:
@@ -86,12 +98,19 @@ class EnrollmentReportGenerator:
         self.header_font = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
         self.title_font = Font(name="Calibri", size=16, bold=True, color="366092")
         self.subtitle_font = Font(name="Calibri", size=12, bold=True, color="44546A")
+        self.thin_side = Side(style='thin')
         self.border = Border(
-            left=Side(style='thin'),
-            right=Side(style='thin'),
-            top=Side(style='thin'),
-            bottom=Side(style='thin')
+            left=self.thin_side,
+            right=self.thin_side,
+            top=self.thin_side,
+            bottom=self.thin_side
         )
+        self.table_header_fill = PatternFill(start_color="DDEBF7", end_color="DDEBF7", fill_type="solid")  # Blue, Accent 1, Lighter 80%
+        self.table_subheader_fill = PatternFill(start_color="E7E6E6", end_color="E7E6E6", fill_type="solid")
+        self.course_identifier_fill = self.table_header_fill
+        self.historical_data_fill = PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")
+        self.forecast_data_fill = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")
+        self._enrollment_table_name: Optional[str] = None
     
     def generate_report(self, output_path: str):
         """Generate the complete Excel report."""
@@ -251,6 +270,139 @@ class EnrollmentReportGenerator:
             "Predicted Total Enrollment": int(self.predictions_df['Predicted_Enrollment'].sum()) if 'Predicted_Enrollment' in self.predictions_df.columns else "N/A",
             "Average Predicted Enrollment": f"{self.predictions_df['Predicted_Enrollment'].mean():.1f}" if 'Predicted_Enrollment' in self.predictions_df.columns else "N/A",
         }
+
+    def _determine_forecast_year(self) -> int:
+        """Infer the forecast year from Term codes, defaulting to next calendar year."""
+        if 'Term' in self.predictions_df.columns:
+            term_years = []
+            for term_value in self.predictions_df['Term'].dropna():
+                year = self._extract_year_from_term(term_value)
+                if year:
+                    term_years.append(year)
+            if term_years:
+                return max(term_years)
+        return datetime.now().year + 1
+
+    def _get_historical_years(self, forecast_year: int, count: int = 3) -> List[int]:
+        """Return a list of historical years to display."""
+        years = [forecast_year - count + i for i in range(count)]
+        return [year for year in years if year > 0]
+
+    @staticmethod
+    def _normalize_subject_code(subject: Any) -> Optional[str]:
+        if pd.isna(subject):
+            return None
+        subject_str = str(subject).strip().upper()
+        return subject_str or None
+
+    @staticmethod
+    def _normalize_course_number(course: Any) -> Optional[str]:
+        if pd.isna(course):
+            return None
+        try:
+            numeric = float(course)
+            if numeric.is_integer():
+                return str(int(numeric))
+        except (TypeError, ValueError):
+            pass
+        course_str = str(course).strip()
+        return course_str or None
+
+    @staticmethod
+    def _extract_year_from_term(term_value: Any) -> Optional[int]:
+        try:
+            term_int = int(float(term_value))
+            if term_int > 0:
+                return term_int // 100
+        except (TypeError, ValueError):
+            return None
+        return None
+
+    def _get_db_connection(self):
+        """Create a PostgreSQL connection using backend db_init settings."""
+        try:
+            return psycopg2.connect(**DB_CONFIG)
+        except Exception as exc:
+            print(f"[WARN] Unable to connect to PostgreSQL for historical data: {exc}")
+            return None
+
+    def _discover_enrollment_table(self, conn) -> Optional[str]:
+        """Identify a table with subj/crse/term/act columns to read history from."""
+        discovery_sql = """
+            SELECT table_name
+            FROM information_schema.columns
+            WHERE table_schema = 'public'
+              AND column_name IN ('subj', 'crse', 'term', 'act')
+            GROUP BY table_name
+            HAVING COUNT(DISTINCT column_name) = 4
+            ORDER BY table_name
+            LIMIT 1;
+        """
+        with conn.cursor() as cur:
+            cur.execute(discovery_sql)
+            result = cur.fetchone()
+        return result[0] if result else None
+
+    def _fetch_historical_enrollment(self, subjects: List[str], courses: List[str], years: List[int]) -> Dict[Tuple[str, str, int], int]:
+        """Fetch summed historical enrollment per subject/course/year from the database."""
+        if not subjects or not courses or not years:
+            return {}
+
+        conn = self._get_db_connection()
+        if not conn:
+            return {}
+
+        try:
+            if not self._enrollment_table_name:
+                self._enrollment_table_name = self._discover_enrollment_table(conn)
+                if not self._enrollment_table_name:
+                    print("[WARN] Could not locate enrollment table with subj/crse/term/act columns.")
+                    return {}
+
+            history_sql = sql.SQL(
+                """
+                SELECT subj,
+                       crse,
+                       FLOOR(NULLIF(term::text, '')::numeric / 100)::INT AS hist_year,
+                       SUM(COALESCE(act, 0)) AS total_enrollment
+                FROM {table}
+                WHERE subj = ANY(%s)
+                  AND crse::text = ANY(%s)
+                  AND NULLIF(term::text, '') IS NOT NULL
+                  AND act IS NOT NULL
+                  AND FLOOR(NULLIF(term::text, '')::numeric / 100)::INT = ANY(%s)
+                GROUP BY subj, crse, hist_year
+                """
+            ).format(table=sql.Identifier(self._enrollment_table_name))
+
+            with conn.cursor() as cur:
+                cur.execute(history_sql, (subjects, courses, years))
+                rows = cur.fetchall()
+
+            history_map: Dict[Tuple[str, str, int], int] = {}
+            for subj, crse, year, total in rows:
+                norm_subj = self._normalize_subject_code(subj)
+                norm_course = self._normalize_course_number(crse)
+                if norm_subj and norm_course and year is not None:
+                    history_map[(norm_subj, norm_course, int(year))] = int(round(total or 0))
+
+            return history_map
+        except Exception as exc:
+            print(f"[WARN] Failed to fetch historical enrollments: {exc}")
+            return {}
+        finally:
+            conn.close()
+
+    def _set_cell_border(self, cell, left=False, right=False, top=False, bottom=False):
+        """Apply borders selectively to a cell."""
+        def _side(flag):
+            return self.thin_side if flag else Side(border_style=None)
+        cell.border = Border(
+            left=_side(left),
+            right=_side(right),
+            top=_side(top),
+            bottom=_side(bottom)
+        )
     
     def _create_visualizations_sheet(self, wb: openpyxl.Workbook):
         """Create sheet with charts and visualizations."""
@@ -448,86 +600,142 @@ class EnrollmentReportGenerator:
         ws[f'A{row}'] = "Predictions"
         ws[f'A{row}'].font = Font(bold=True)
         row += 1
-        
+
         # Institution header
         institution_row = row
         ws[f'A{institution_row}'] = "Central Connecticut State University"
-        ws[f'A{institution_row}'].font = Font(bold=True, size=11)
-        ws[f'A{institution_row}'].fill = PatternFill(start_color="D9E1F2", end_color="D9E1F2", fill_type="solid")
-        ws.merge_cells(f'A{institution_row}:G{institution_row}')
+        ws[f'A{institution_row}'].font = Font(bold=True, size=11, color="FFFFFF")
+        ws[f'A{institution_row}'].fill = PatternFill(start_color="1F4E79", end_color="1F4E79", fill_type="solid")
+        ws.merge_cells(f'A{institution_row}:E{institution_row}')
         row += 1
-        
+
         # School header
         school_row = row
         ws[f'A{school_row}'] = "School of Business"
-        ws[f'A{school_row}'].font = Font(bold=True, size=10, italic=True)
-        ws[f'A{school_row}'].fill = PatternFill(start_color="E7E6E6", end_color="E7E6E6", fill_type="solid")
-        ws.merge_cells(f'A{school_row}:G{school_row}')
+        ws[f'A{school_row}'].font = Font(bold=True, size=10, italic=True, color="FFFFFF")
+        ws[f'A{school_row}'].fill = PatternFill(start_color="1F4E79", end_color="1F4E79", fill_type="solid")
+        ws.merge_cells(f'A{school_row}:E{school_row}')
         row += 1
-        
+
+        forecast_year = self._determine_forecast_year()
+        historical_years = self._get_historical_years(forecast_year)
+
+        normalized_pairs = []
+        pred_map: Dict[Tuple[str, str], int] = {}
+        if 'Subject' in self.predictions_df.columns and 'Course' in self.predictions_df.columns:
+            for _, r in self.predictions_df.iterrows():
+                subj = self._normalize_subject_code(r.get('Subject'))
+                course = self._normalize_course_number(r.get('Course'))
+                prediction_value = r.get('Predicted_Enrollment', r.get('prediction'))
+                if subj and course and pd.notna(prediction_value):
+                    pred_map[(subj, course)] = int(round(float(prediction_value)))
+                    normalized_pairs.append((subj, course))
+
+        unique_subjects = sorted({subj for subj, _ in normalized_pairs})
+        unique_courses = sorted({course for _, course in normalized_pairs})
+        history_map = self._fetch_historical_enrollment(unique_subjects, unique_courses, historical_years)
+
         # Group predictions by subject (department)
         if 'Subject' in self.predictions_df.columns and 'Course' in self.predictions_df.columns:
             grouped = self.predictions_df.groupby('Subject')
-            
+
             for subject, group_df in grouped:
-                # Department header
                 dept_row = row
                 dept_name = self._get_department_name(subject)
-                ws[f'B{dept_row}'] = dept_name
-                ws[f'B{dept_row}'].font = Font(bold=True, size=10)
-                ws[f'B{dept_row}'].fill = PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")
-                ws.merge_cells(f'B{dept_row}:G{dept_row}')
+                ws[f'A{dept_row}'] = dept_name
+                ws[f'A{dept_row}'].font = Font(bold=True, size=11)
+                ws.merge_cells(f'A{dept_row}:E{dept_row}')
+                dept_fill = PatternFill(start_color="BFD9EF", end_color="BFD9EF", fill_type="solid")
+                for col_idx, col in enumerate(['A', 'B', 'C', 'D', 'E']):
+                    cell = ws[f'{col}{dept_row}']
+                    cell.fill = dept_fill
+                    left = (col == 'A')
+                    right = (col == 'E')
+                    self._set_cell_border(cell, left=left, right=right, top=True, bottom=True)
                 row += 1
-                
-                # Get unique courses in this department
+
+                header_row = row
+                ws[f'A{header_row}'] = "Course Identifier"
+                ws[f'A{header_row}'].font = Font(bold=True)
+                ws[f'A{header_row}'].fill = self.table_header_fill
+                self._set_cell_border(ws[f'A{header_row}'], left=True, right=True, top=True, bottom=True)
+                ws[f'B{header_row}'] = "Historical Enrollment"
+                ws[f'B{header_row}'].font = Font(bold=True)
+                ws.merge_cells(f'B{header_row}:D{header_row}')
+                # Ensure merged cells inherit fill/borders
+                for col in ['B', 'C', 'D']:
+                    ws[f'{col}{header_row}'].fill = self.table_header_fill
+                ws[f'E{header_row}'] = "Forecast"
+                ws[f'E{header_row}'].font = Font(bold=True)
+                ws[f'E{header_row}'].fill = self.table_header_fill
+                ws[f'B{header_row}'].alignment = Alignment(horizontal='center')
+                ws[f'E{header_row}'].alignment = Alignment(horizontal='center')
+                self._set_cell_border(ws[f'B{header_row}'], left=True, top=True, bottom=True)
+                self._set_cell_border(ws[f'C{header_row}'], top=True, bottom=True)
+                self._set_cell_border(ws[f'D{header_row}'], right=True, top=True, bottom=True)
+                self._set_cell_border(ws[f'E{header_row}'], left=True, right=True, top=True, bottom=True)
+                row += 1
+
+                sub_row = row
+                ws[f'A{sub_row}'] = ""
+                ws[f'A{sub_row}'].fill = self.course_identifier_fill
+                self._set_cell_border(ws[f'A{sub_row}'], left=True, right=True, top=True, bottom=True)
+                for i, year in enumerate(historical_years, start=2):
+                    col = openpyxl.utils.get_column_letter(i)
+                    ws[f'{col}{sub_row}'] = str(year)
+                    ws[f'{col}{sub_row}'].font = Font(bold=True)
+                    ws[f'{col}{sub_row}'].alignment = Alignment(horizontal='center')
+                    ws[f'{col}{sub_row}'].fill = self.table_subheader_fill
+                    left_border = (col == 'B')
+                    right_border = (col == 'D')
+                    self._set_cell_border(ws[f'{col}{sub_row}'], left=left_border, right=right_border, top=True, bottom=True)
+                ws[f'E{sub_row}'] = str(forecast_year)
+                ws[f'E{sub_row}'].font = Font(bold=True)
+                ws[f'E{sub_row}'].alignment = Alignment(horizontal='center')
+                ws[f'E{sub_row}'].fill = self.forecast_data_fill
+                self._set_cell_border(ws[f'E{sub_row}'], left=True, right=True, top=True, bottom=True)
+                row += 1
+
                 courses = group_df[['Course', 'Subject']].drop_duplicates()
-                
+
                 for _, course_row_data in courses.iterrows():
-                    course_num = course_row_data['Course']
-                    
-                    # Course identifier
-                    course_row = row
-                    ws[f'A{course_row}'] = "Course Identifier"
-                    row += 1
-                    
-                    # Course code and historical data header
-                    ws[f'A{row}'] = f"{subject} {course_num}"
-                    ws[f'B{row}'] = "Historical Enrollment Count"
-                    ws[f'B{row}'].font = Font(bold=True)
-                    
-                    # Add year headers (2022, 2023, 2024, Predicted)
-                    ws[f'C{row}'] = "2022"
-                    ws[f'D{row}'] = "2023"
-                    ws[f'E{row}'] = "2024"
-                    ws[f'F{row}'] = "Predicted"
-                    ws[f'F{row}'].fill = PatternFill(start_color="FFEB9C", end_color="FFEB9C", fill_type="solid")
-                    
-                    for col in ['C', 'D', 'E', 'F']:
-                        ws[f'{col}{row}'].font = Font(bold=True)
+                    subj_code = self._normalize_subject_code(course_row_data['Subject'])
+                    course_code = self._normalize_course_number(course_row_data['Course'])
+                    ws[f'A{row}'] = f"{course_row_data['Subject']} {course_row_data['Course']}"
+                    ws[f'A{row}'].alignment = Alignment(horizontal='left')
+                    ws[f'A{row}'].fill = self.course_identifier_fill
+                    self._set_cell_border(ws[f'A{row}'], left=True, right=True, top=True, bottom=True)
+
+                    for i, year in enumerate(historical_years, start=2):
+                        col = openpyxl.utils.get_column_letter(i)
+                        value = ""
+                        if subj_code and course_code:
+                            value = history_map.get((subj_code, course_code, year), "")
+                        ws[f'{col}{row}'] = value
                         ws[f'{col}{row}'].alignment = Alignment(horizontal='center')
-                    
+                        ws[f'{col}{row}'].fill = self.historical_data_fill
+                        left_border = (col == 'B')
+                        right_border = (col == 'D')
+                        self._set_cell_border(ws[f'{col}{row}'], left=left_border, right=right_border, top=True, bottom=True)
+
+                    pred_value = ""
+                    if subj_code and course_code:
+                        pred_value = pred_map.get((subj_code, course_code), "")
+                    ws[f'E{row}'] = pred_value
+                    ws[f'E{row}'].alignment = Alignment(horizontal='center')
+                    ws[f'E{row}'].fill = self.forecast_data_fill
+                    self._set_cell_border(ws[f'E{row}'], left=True, right=True, top=True, bottom=True)
+
                     row += 1
-                    
-                    # Get prediction for this course (average across sections)
-                    course_predictions = group_df[group_df['Course'] == course_num]
-                    if len(course_predictions) > 0 and 'Predicted_Enrollment' in course_predictions.columns:
-                        predicted_val = int(course_predictions['Predicted_Enrollment'].sum())
-                        
-                        # Data row (leave historical blank for now, show predicted)
-                        ws[f'C{row}'] = ""  # Would need historical data
-                        ws[f'D{row}'] = ""
-                        ws[f'E{row}'] = ""
-                        ws[f'F{row}'] = predicted_val
-                        ws[f'F{row}'].alignment = Alignment(horizontal='center')
-                        row += 1
-                    
-                    row += 1  # Add spacing between courses
-        
+
+                row += 1
+
         # Set column widths
         ws.column_dimensions['A'].width = 20
-        ws.column_dimensions['B'].width = 35
-        ws.column_dimensions['C'].width = 12
-        ws.column_dimensions['D'].width = 12
+        uniform_year_width = 12
+        ws.column_dimensions['B'].width = uniform_year_width
+        ws.column_dimensions['C'].width = uniform_year_width
+        ws.column_dimensions['D'].width = uniform_year_width
         ws.column_dimensions['E'].width = 12
         ws.column_dimensions['F'].width = 12
         ws.column_dimensions['G'].width = 12
