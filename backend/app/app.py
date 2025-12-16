@@ -28,14 +28,17 @@ from __future__ import annotations
 import json
 import os
 import pickle
+import subprocess
+import tempfile
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
+from uuid import uuid4
 
 import numpy as np
 import pandas as pd
 import psycopg2
-from flask import Flask, current_app, jsonify, request, send_from_directory
+from flask import Flask, current_app, jsonify, request, send_from_directory, send_file, after_this_request
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
 
@@ -92,6 +95,8 @@ def _to_native(obj: Any) -> Any:
 # ------------------------------------------------------------------------------
 
 BASE_DIR = Path(__file__).resolve().parent  # .../backend/app
+REPO_ROOT = BASE_DIR.parent.parent
+REPORT_SCRIPT = (REPO_ROOT / "frontend" / "src" / "generate_report.py").resolve()
 
 # Candidate locations to support different working directories (app folder vs backend root).
 CANDIDATE_MAP_PATHS = [
@@ -470,6 +475,75 @@ def train_route():
         )
     except Exception as exc:
         current_app.logger.exception("Training failed")
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
+
+@app.route("/api/reports/export", methods=["POST"])
+def export_report():
+    """Generate and return an Excel report using generate_report.py."""
+    try:
+        data = request.get_json(silent=True) or {}
+        rows = data.get("rows")
+        accuracy_csv = data.get("accuracy_csv")
+        model_info = data.get("model_info") or {}
+
+        if not isinstance(rows, list) or not rows:
+            return jsonify({"ok": False, "error": "rows must be a non-empty list"}), 400
+
+        if not REPORT_SCRIPT.exists():
+            return jsonify({"ok": False, "error": f"Report script not found at {REPORT_SCRIPT}"}), 500
+
+        temp_dir = Path(tempfile.mkdtemp(prefix="report_export_"))
+        predictions_path = temp_dir / "predictions.json"
+        output_path = temp_dir / f"enrollment_report_{uuid4().hex}.xlsx"
+
+        predictions_path.write_text(json.dumps(rows), encoding="utf-8")
+
+        cmd = [
+            "python",
+            str(REPORT_SCRIPT),
+            "--json",
+            str(predictions_path),
+            "--output",
+            str(output_path),
+        ]
+
+        if accuracy_csv:
+            cmd += ["--accuracy", accuracy_csv]
+        if model_info.get("model_type"):
+            cmd += ["--model-type", model_info["model_type"]]
+        if model_info.get("model_name"):
+            cmd += ["--model-name", model_info["model_name"]]
+        if model_info.get("feature_schema"):
+            cmd += ["--feature-schema", model_info["feature_schema"]]
+
+        subprocess.run(cmd, check=True)
+
+        if not output_path.exists():
+            raise FileNotFoundError("Report generation did not produce output file")
+
+        @after_this_request
+        def cleanup(response):
+            try:
+                for path in (predictions_path, output_path):
+                    if path.exists():
+                        path.unlink()
+                temp_dir.rmdir()
+            except Exception:
+                pass
+            return response
+
+        return send_file(
+            str(output_path),
+            as_attachment=True,
+            download_name="enrollment_report.xlsx",
+            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+    except subprocess.CalledProcessError as exc:
+        current_app.logger.exception("Report generation failed")
+        return jsonify({"ok": False, "error": f"Report generation failed: {exc}"}), 500
+    except Exception as exc:
+        current_app.logger.exception("Report export failed")
         return jsonify({"ok": False, "error": str(exc)}), 500
 
 

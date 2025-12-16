@@ -224,6 +224,9 @@ export default function App() {
   const [departmentFilter, setDepartmentFilter] = useState<string>("");
   const [predictionSeason, setPredictionSeason] = useState<PredictionSeason>("spring");
   const [predictionYear, setPredictionYear] = useState<string>("2026");
+  const [accuracyPath, setAccuracyPath] = useState<string>("");
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   // -----------------------------
   // Training Form State
@@ -589,9 +592,57 @@ export default function App() {
    * Export handler (framework-only).
    * Implement CSV/XLSX export here, likely based on `results` or `sortedResults`.
    */
-  const handleExportResults = () => {
-    // TODO: Add export logic (CSV/XLSX)
-    console.log("Export clicked. Rows:", results.length);
+  const handleExportResults = async () => {
+    if (!rawResponse || !Array.isArray(rawResponse) || rawResponse.length === 0) {
+      setExportError("No data available to export.");
+      return;
+    }
+
+    setIsExporting(true);
+    setExportError(null);
+
+    try {
+      const modelInfo = {
+        model_type: "Tree Ensemble",
+        model_name: uploadedModelFilename || model || "enrollment_tree_v2",
+        feature_schema: "auto",
+      };
+
+      const res = await fetch(`${API_BASE_URL}/api/reports/export`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          rows: rawResponse,
+          accuracy_csv: accuracyPath || null,
+          model_info: modelInfo,
+        }),
+      });
+
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        throw new Error(text || `Server responded with status ${res.status}`);
+      }
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const disposition = res.headers.get("Content-Disposition") || "";
+      const match = disposition.match(/filename="?([^\";]+)"?/i);
+      const filename = match?.[1] ?? "enrollment_report.xlsx";
+
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Export failed:", err);
+      setExportError(err instanceof Error ? err.message : "Unknown export error");
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   // -----------------------------
@@ -934,16 +985,31 @@ export default function App() {
                   </div>
 
                   {/* Export */}
-                  <div className="flex justify-end">
-                    <Button
-                      onClick={handleExportResults}
-                      variant="outline"
-                      className="border-[#194678] text-[#194678] hover:bg-[#C2D8FF]/20"
-                      disabled={results.length === 0}
-                    >
-                      <Download className="w-4 h-4 mr-2" />
-                      Export
-                    </Button>
+                  <div className="flex flex-col md:flex-row justify-end gap-4">
+                    <div className="flex-1 md:flex-none">
+                      <label className="text-sm">Accuracy CSV Path (optional)</label>
+                      <Input
+                        type="text"
+                        placeholder="backend/app/ml/test_results/..."
+                        value={accuracyPath}
+                        onChange={(e) => setAccuracyPath(e.target.value)}
+                        className="border-gray-300 hover:border-[#94BAEB] focus:border-[#194678]"
+                      />
+                    </div>
+                    <div className="flex flex-col items-end gap-2">
+                      <Button
+                        onClick={handleExportResults}
+                        variant="outline"
+                        className="border-[#194678] text-[#194678] hover:bg-[#C2D8FF]/20"
+                        disabled={results.length === 0 || isExporting}
+                      >
+                        <Download className="w-4 h-4 mr-2" />
+                        {isExporting ? "Exporting..." : "Export"}
+                      </Button>
+                      {exportError && (
+                        <p className="text-xs text-red-600">Export error: {exportError}</p>
+                      )}
+                    </div>
                   </div>
                 </div>
               )}
