@@ -220,6 +220,7 @@ export default function App() {
   const [isLoadingModels, setIsLoadingModels] = useState(false);
   const [modelError, setModelError] = useState<string | null>(null);
   const [isUploadingModel, setIsUploadingModel] = useState(false);
+  const [uploadedModelFilename, setUploadedModelFilename] = useState<string | null>(null);
   const [departmentFilter, setDepartmentFilter] = useState<string>("");
   const [predictionSeason, setPredictionSeason] = useState<PredictionSeason>("spring");
   const [predictionYear, setPredictionYear] = useState<string>("2026");
@@ -228,6 +229,10 @@ export default function App() {
   // Training Form State
   // -----------------------------
   const [selectedSemesters, setSelectedSemesters] = useState<string[]>([]);
+  const [trainingModel, setTrainingModel] = useState<string>("tree");
+  const [trainingFeatures, setTrainingFeatures] = useState<string>("min");
+  const [isUploadingTraining, setIsUploadingTraining] = useState(false);
+  const [trainingUploadError, setTrainingUploadError] = useState<string | null>(null);
 
   // -----------------------------
   // Reference Data State
@@ -309,10 +314,6 @@ export default function App() {
         : [];
 
       setModelOptions(filenames);
-
-      if (filenames.length > 0) {
-        setModel((current) => current || filenames[0]);
-      }
     } catch (err) {
       console.error("Failed to fetch models:", err);
       setModelError(err instanceof Error ? err.message : "Unknown error fetching models");
@@ -434,13 +435,42 @@ export default function App() {
 
       await fetchModels();
       if (savedFilename) {
-        setModel(savedFilename);
+        setUploadedModelFilename(savedFilename);
       }
     } catch (err) {
       console.error("Failed to upload model:", err);
       setModelError(err instanceof Error ? err.message : "Unknown error uploading model");
     } finally {
       setIsUploadingModel(false);
+    }
+  };
+
+  const handleTrainingUploadChange = async (files: File[]) => {
+    setTrainingFiles(files);
+    setTrainingUploadError(null);
+    if (!files.length) return;
+
+    setIsUploadingTraining(true);
+    try {
+      for (const file of files) {
+        const formData = new FormData();
+        formData.append("file", file);
+
+        const res = await fetch(`${API_BASE_URL}/api/train/upload-file`, {
+          method: "POST",
+          body: formData,
+        });
+
+        const data = await res.json().catch(() => null);
+        if (!res.ok || data?.ok === false) {
+          throw new Error(data?.error || `Failed to upload ${file.name}`);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to upload training file:", err);
+      setTrainingUploadError(err instanceof Error ? err.message : "Unknown upload error");
+    } finally {
+      setIsUploadingTraining(false);
     }
   };
 
@@ -494,8 +524,9 @@ export default function App() {
       features: "min",
     } as Record<string, string>;
 
-    if (model) {
-      payload.model_filename = model;
+    const modelFilename = uploadedModelFilename || model;
+    if (modelFilename) {
+      payload.model_filename = modelFilename;
     }
 
 
@@ -582,7 +613,38 @@ export default function App() {
     setTrainingError(null);
 
     try {
-      // TODO: add training logic here
+      const selectedTerms = semesterOptions
+        .filter((s) => selectedSemesters.includes(s.term_desc))
+        .map((s) => s.term);
+
+      if (selectedTerms.length === 0) {
+        throw new Error("Select at least one semester.");
+      }
+
+      const payload = {
+        model: trainingModel,
+        features: trainingFeatures,
+        terms: selectedTerms,
+      };
+
+      const res = await fetch(`${API_BASE_URL}/api/train`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json().catch(() => null);
+      if (!res.ok || data?.ok === false) {
+        throw new Error(data?.error || `Server responded with status ${res.status}`);
+      }
+
+      console.log("Training complete:", data);
+
+      // Refresh available models and preselect the newly trained one
+      await fetchModels();
+      if (data?.model_filename) {
+        setUploadedModelFilename(data.model_filename);
+      }
     } catch (err) {
       console.error("Error training model:", err);
       setTrainingError(err instanceof Error ? err.message : "Unknown training error");
@@ -668,9 +730,7 @@ export default function App() {
                               ? "Loading models..."
                               : modelError
                               ? "Error loading models"
-                              : modelOptions.length === 0
-                              ? "No models found"
-                              : "Select model"
+                              : "Select Model"
                           }
                         />
                       </SelectTrigger>
@@ -895,22 +955,20 @@ export default function App() {
                 {/* Schema Information */}
                 <div className="border border-[#94BAEB] rounded-lg overflow-hidden">
                   <div className="bg-[#194678] text-white px-4 py-3">
-                    <h3 className="text-white">Schema Information</h3>
+                    <h3 className="text-white">Training Instructions</h3>
                   </div>
 
                   <div className="p-6 space-y-6">
                     <div className="bg-[#C2D8FF]/20 rounded-md p-4 space-y-3">
                       <div className="py-2">
-                        <p className="text-md mb-1">Feature Description:</p>
-                        <p className="text-sm">Text here...</p>
+                        <p className="text-sm">
+                          Load a CSV with the above schema to train a new enrollment prediction model with the given parameters.
+                        </p>
                       </div>
 
                       <div className="py-2">
-                        <p className="text-md mb-1">Required Fields:</p>
-                        <p className="text-sm">
-                          Term, Term Desc, CRN, Subj, Crse, Sec, Credits, Title, Act,
-                          XL Act
-                        </p>
+                        <p className="text-md mb-1">Enrollment Headcount Schema:</p>
+                        <p className="text-sm">Term, Term Desc, CRN, Subj, Crse, Sec, Credits, Title, Act, XL Act </p>
                       </div>
                     </div>
                   </div>
@@ -919,11 +977,47 @@ export default function App() {
                 {/* Training File Upload */}
                 <FileUpload
                   label="Upload Training Data"
-                  onFileChange={setTrainingFiles}
-                  description="Term, Term Desc, CRN, Subj, Crse, Sec, Credits, Title, Act, XL Act"
-                  acceptedExtensions={[".csv", ".xlsx"]}
+                  onFileChange={handleTrainingUploadChange}
+                  description="Upload training CSVs (saved to backend/data/csv)."
+                  acceptedExtensions={[".csv"]}
                   limitUpload={false}
                 />
+                {isUploadingTraining && (
+                  <p className="text-xs text-gray-500">Uploading training file(s)...</p>
+                )}
+                {trainingUploadError && (
+                  <p className="text-xs text-red-600">Upload error: {trainingUploadError}</p>
+                )}
+
+                {/* Training Parameters */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-sm">Model Type</label>
+                    <Select value={trainingModel} onValueChange={setTrainingModel}>
+                      <SelectTrigger className="border-gray-300 hover:border-[#94BAEB]">
+                        <SelectValue placeholder="Select model type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="tree">Tree</SelectItem>
+                        <SelectItem value="linear">Linear</SelectItem>
+                        <SelectItem value="neural">Neural</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm">Feature Schema</label>
+                    <Select value={trainingFeatures} onValueChange={setTrainingFeatures}>
+                      <SelectTrigger className="border-gray-300 hover:border-[#94BAEB]">
+                        <SelectValue placeholder="Select features" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="min">Min</SelectItem>
+                        <SelectItem value="rich">Rich</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
 
                 {/* Semester Multi-Select */}
                 <SemesterSelector
@@ -939,7 +1033,7 @@ export default function App() {
                   <Button
                     onClick={handleTrainModel}
                     className="bg-[#194678] hover:bg-[#194678]/90 text-white px-8 py-6"
-                    disabled={isTraining || trainingFiles.length === 0}
+                    disabled={isTraining || isUploadingTraining || trainingFiles.length === 0}
                   >
                     {isTraining ? "Training..." : "Train Model"}
                   </Button>

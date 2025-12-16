@@ -40,6 +40,11 @@ from flask_cors import CORS
 from werkzeug.utils import secure_filename
 
 from ml.predictor_service import _choose_model_path, predict_with_model
+from ml.data.data_loader import DataLoader
+from ml.data.feature_engineer import FeatureEngineer
+from ml.models.linear_predictor import LinearRegressionPredictor
+from ml.models.tree_predictor import TreePredictor
+from ml.models.neural_predictor import NeuralNetworkPredictor
 
 
 # ------------------------------------------------------------------------------
@@ -117,6 +122,8 @@ if not SUBJECT_DEPT_MAP:
 
 MODEL_DIR = (Path(__file__).resolve().parent.parent / "data" / "prediction_models").resolve()
 MODEL_DIR.mkdir(parents=True, exist_ok=True)
+TRAIN_CSV_DIR = (Path(__file__).resolve().parent.parent / "data" / "csv").resolve()
+TRAIN_CSV_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def _list_available_models() -> list[dict[str, Any]]:
@@ -132,6 +139,21 @@ def _list_available_models() -> list[dict[str, Any]]:
             }
         )
     return models
+
+
+def _build_predictor(model_type: str, feature_schema: str, custom_query: Optional[str]):
+    """Factory mirroring train_model.py for API usage."""
+    model_type = (model_type or "tree").lower()
+    feature_schema = (feature_schema or "min").lower()
+
+    if model_type == "linear":
+        return LinearRegressionPredictor(feature_schema, custom_query=custom_query)
+    if model_type == "tree":
+        return TreePredictor(feature_schema, custom_query=custom_query)
+    if model_type == "neural":
+        return NeuralNetworkPredictor(feature_schema, custom_query=custom_query)
+
+    raise ValueError(f"Unsupported model type: {model_type}")
 
 
 # ------------------------------------------------------------------------------
@@ -335,6 +357,119 @@ def upload_model():
         return jsonify({"ok": True, "filename": filename, "models": models})
     except Exception as exc:
         current_app.logger.exception("Failed to upload model")
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
+
+@app.route("/api/train/upload-file", methods=["POST"])
+def upload_training_file():
+    """
+    Upload training CSVs to the container's data/csv directory.
+
+    Expects multipart/form-data with field name 'file'.
+    """
+    try:
+        if "file" not in request.files:
+            return jsonify({"ok": False, "error": "Missing uploaded file 'file'"}), 400
+
+        file = request.files["file"]
+        if not file or not file.filename:
+            return jsonify({"ok": False, "error": "Empty filename"}), 400
+
+        filename = secure_filename(file.filename)
+        if not filename.lower().endswith(".csv"):
+            return jsonify({"ok": False, "error": "Only .csv files are allowed"}), 400
+
+        target = TRAIN_CSV_DIR / filename
+        if target.exists():
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            target = TRAIN_CSV_DIR / f"{target.stem}_{timestamp}{target.suffix}"
+            filename = target.name
+
+        file.save(target)
+        return jsonify({"ok": True, "filename": filename, "path": str(target)})
+    except Exception as exc:
+        current_app.logger.exception("Failed to upload training file")
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
+
+@app.route("/api/train", methods=["POST"])
+def train_route():
+    """
+    Train a model using the train_model.py pipeline with selected semesters.
+    Body (JSON):
+      {
+        "model": "tree" | "linear" | "neural",
+        "features": "min" | "rich",
+        "terms": [202430, 202440]   # required
+      }
+    """
+    try:
+        payload = request.get_json(silent=True) or {}
+        model_type = payload.get("model", "tree")
+        feature_schema = payload.get("features", "min")
+        terms_raw = payload.get("terms") or []
+
+        try:
+            term_values = [int(t) for t in terms_raw if str(t).strip() != ""]
+        except Exception:
+            return jsonify({"ok": False, "error": "Invalid term values"}), 400
+
+        if not term_values:
+            return jsonify({"ok": False, "error": "At least one term is required"}), 400
+
+        act_threshold = 10
+        term_list = ", ".join(str(t) for t in term_values)
+        custom_query = (
+            "SELECT * FROM section_detail_report_sbussection_detail_report_sbus "
+            f"WHERE term IN ({term_list}) AND act > {act_threshold}"
+        )
+
+        predictor = _build_predictor(model_type, feature_schema, custom_query=custom_query)
+
+        data_loader = DataLoader(custom_query)
+        raw_data = data_loader.extract_training_data()
+
+        fe = FeatureEngineer(feature_schema)
+        X, y = fe.prepare_features(raw_data)
+        predictor.feature_columns = fe.feature_columns
+
+        predictor.train(X, y)
+
+        sorted_terms = sorted(term_values)
+
+        def _season_from_term(term_value: int) -> str:
+            suffix = term_value % 100
+            mapping = {
+                10: "fall",   
+                40: "spring",
+            }
+            return mapping.get(suffix, f"term{suffix}")
+
+        start_term = sorted_terms[0]
+        end_term = sorted_terms[-1]
+        start_year = start_term // 100
+        end_year = end_term // 100
+        start_season = _season_from_term(start_term)
+        end_season = _season_from_term(end_term)
+
+        model_filename = (
+            f"enrollment_tree_{feature_schema}_{model_type}_"
+            f"{start_season}_{start_year}_to_{end_season}_{end_year}.pkl"
+        )
+        model_path = MODEL_DIR / model_filename
+        predictor.save_model(str(model_path))
+
+        return jsonify(
+            {
+                "ok": True,
+                "model_filename": model_filename,
+                "saved_path": str(model_path),
+                "terms": term_values,
+                "row_count": int(getattr(X, "shape", [0])[0]),
+            }
+        )
+    except Exception as exc:
+        current_app.logger.exception("Training failed")
         return jsonify({"ok": False, "error": str(exc)}), 500
 
 

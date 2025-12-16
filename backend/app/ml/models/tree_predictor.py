@@ -5,8 +5,8 @@ import numpy as np
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split, GridSearchCV
 
-from models.base_predictor import EnrollmentPredictor
-from utils.evaluation import analyze_per_course_accuracy
+from .base_predictor import EnrollmentPredictor
+from ..utils.evaluation import analyze_per_course_accuracy
 
 
 class TreePredictor(EnrollmentPredictor):
