@@ -53,6 +53,12 @@ const SUBJECT_DEPT_MAP = subjectDepartmentMap as Record<string, string>;
 const API_BASE_URL =
   (import.meta as any).env?.VITE_API_URL ?? "http://localhost:5000";
 
+declare global {
+  interface Window {
+    showDirectoryPicker?: () => Promise<FileSystemDirectoryHandle>;
+  }
+}
+
 /** UI row for the prediction table. */
 interface ResultRow {
   /** Stable unique id for React keys. */
@@ -225,6 +231,7 @@ export default function App() {
   const [predictionSeason, setPredictionSeason] = useState<PredictionSeason>("spring");
   const [predictionYear, setPredictionYear] = useState<string>("2026");
   const [accuracyPath, setAccuracyPath] = useState<string>("");
+  const [browseError, setBrowseError] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
 
@@ -645,6 +652,35 @@ export default function App() {
     }
   };
 
+  const handleAccuracyPathInputChange = (value: string) => {
+    setAccuracyPath(value);
+    if (browseError) {
+      setBrowseError(null);
+    }
+  };
+
+  const handleAccuracyPathBrowse = async () => {
+    setBrowseError(null);
+
+    try {
+      if (typeof window === "undefined" || !window.showDirectoryPicker) {
+        setBrowseError("Folder browsing is not available in this browser.");
+        return;
+      }
+
+      const directoryHandle = await window.showDirectoryPicker();
+      if (!directoryHandle || !directoryHandle.name) return;
+
+      handleAccuracyPathInputChange(directoryHandle.name);
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") {
+        return;
+      }
+      console.error("Directory picker failed:", err);
+      setBrowseError("Unable to open the folder picker. Please try again.");
+    }
+  };
+
   // -----------------------------
   // Actions: Training (framework)
   // -----------------------------
@@ -985,29 +1021,49 @@ export default function App() {
                   </div>
 
                   {/* Export */}
-                  <div className="flex flex-col md:flex-row justify-end gap-4">
-                    <div className="flex-1 md:flex-none">
+                  <div className="flex flex-col md:flex-row md:items-end gap-4">
+                    <div className="flex-1 md:flex-none space-y-2">
                       <label className="text-sm">Accuracy CSV Path (optional)</label>
-                      <Input
-                        type="text"
-                        placeholder="backend/app/ml/test_results/..."
-                        value={accuracyPath}
-                        onChange={(e) => setAccuracyPath(e.target.value)}
-                        className="border-gray-300 hover:border-[#94BAEB] focus:border-[#194678]"
-                      />
-                    </div>
-                    <div className="flex flex-col items-end gap-2">
-                      <Button
-                        onClick={handleExportResults}
-                        variant="outline"
-                        className="border-[#194678] text-[#194678] hover:bg-[#C2D8FF]/20"
-                        disabled={results.length === 0 || isExporting}
-                      >
-                        <Download className="w-4 h-4 mr-2" />
-                        {isExporting ? "Exporting..." : "Export"}
-                      </Button>
+                      <div className="flex gap-2">
+                        <Input
+                          type="text"
+                          placeholder="backend/app/ml/test_results/..."
+                          value={accuracyPath}
+                          onChange={(e) => handleAccuracyPathInputChange(e.target.value)}
+                          className="flex-1 border-gray-300 hover:border-[#94BAEB] focus:border-[#194678]"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={handleAccuracyPathBrowse}
+                          className="border-[#194678] text-[#194678] hover:bg-[#C2D8FF]/20 whitespace-nowrap"
+                        >
+                          Browse
+                        </Button>
+                      </div>
+                      {accuracyPath.trim() !== "" && (
+                        <p className="text-xs text-[#194678] break-all">
+                          Selected path: {accuracyPath}
+                        </p>
+                      )}
+                      {browseError && (
+                        <p className="text-xs text-red-600">{browseError}</p>
+                      )}
+                      <div className="flex justify-end">
+                        <Button
+                          onClick={handleExportResults}
+                          variant="outline"
+                          className="border-[#194678] text-[#194678] hover:bg-[#C2D8FF]/20 px-4 py-2 text-sm"
+                          disabled={results.length === 0 || isExporting}
+                        >
+                          <Download className="w-4 h-4 mr-2" />
+                          {isExporting ? "Exporting..." : "Export"}
+                        </Button>
+                      </div>
                       {exportError && (
-                        <p className="text-xs text-red-600">Export error: {exportError}</p>
+                        <p className="text-xs text-red-600 text-right">
+                          Export error: {exportError}
+                        </p>
                       )}
                     </div>
                   </div>
