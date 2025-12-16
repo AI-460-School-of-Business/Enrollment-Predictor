@@ -19,6 +19,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { FileUpload } from "./components/FileUpload";
 import { Button } from "./components/ui/button";
 import { Input } from "./components/ui/input";
+import { SelectField } from "./components/SelectField";
 import {
   Select,
   SelectContent,
@@ -1083,14 +1084,14 @@ export default function App() {
                   <div className="p-6 space-y-6">
                     <div className="bg-[#C2D8FF]/20 rounded-md p-4 space-y-3">
                       <div className="py-2">
-                        <p className="text-sm">
+                        <p className="text-md mb-1">
                           Load a CSV with the above schema to train a new enrollment prediction model with the given parameters.
                         </p>
                       </div>
 
                       <div className="py-2">
-                        <p className="text-md mb-1">Enrollment Headcount Schema:</p>
-                        <p className="text-sm">Term, Term Desc, CRN, Subj, Crse, Sec, Credits, Title, Act, XL Act </p>
+                        <p className="text-md mb-1"><strong>Enrollment Headcount Schema:</strong></p>
+                        <p className="text-md mb-1">Term, Term Desc, CRN, Subj, Crse, Sec, Credits, Title, Act, XL Act </p>
                       </div>
                     </div>
                   </div>
@@ -1100,7 +1101,7 @@ export default function App() {
                 <FileUpload
                   label="Upload Training Data"
                   onFileChange={handleTrainingUploadChange}
-                  description="Upload training CSVs (saved to backend/data/csv)."
+                  description="Upload data from registrar. Expected headers: Term, Term Desc, CRN, Subj, Crse, Sec, Credits, Title, Act, XL Act."
                   acceptedExtensions={[".csv"]}
                   limitUpload={false}
                 />
@@ -1114,21 +1115,28 @@ export default function App() {
                 {/* Training Parameters */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <label className="text-sm">Model Type</label>
-                    <Select value={trainingModel} onValueChange={setTrainingModel}>
-                      <SelectTrigger className="border-gray-300 hover:border-[#94BAEB]">
-                        <SelectValue placeholder="Select model type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="tree">Tree</SelectItem>
-                        <SelectItem value="linear">Linear</SelectItem>
-                        <SelectItem value="neural">Neural</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <SelectField
+                      label="Model Type"
+                      description="Choose which model family to train (Tree is usually fastest to start with)."
+                    >
+                      <Select value={trainingModel} onValueChange={setTrainingModel}>
+                        <SelectTrigger className="border-gray-300 hover:border-[#94BAEB]">
+                          <SelectValue placeholder="Select model type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="tree">Tree</SelectItem>
+                          <SelectItem value="linear">Linear</SelectItem>
+                          <SelectItem value="neural">Neural</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </SelectField>
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-sm">Feature Schema</label>
+                    <SelectField
+                      label="Feature Schema"
+                      description="Choose which feature schema to use for training."
+                    >
                     <Select value={trainingFeatures} onValueChange={setTrainingFeatures}>
                       <SelectTrigger className="border-gray-300 hover:border-[#94BAEB]">
                         <SelectValue placeholder="Select features" />
@@ -1138,6 +1146,7 @@ export default function App() {
                         <SelectItem value="rich">Rich</SelectItem>
                       </SelectContent>
                     </Select>
+                    </SelectField>
                   </div>
                 </div>
 
