@@ -1116,8 +1116,8 @@ export default function App() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <SelectField
-                      label="Model Type"
-                      description="Choose which model family to train (Tree is usually fastest to start with)."
+                      label="Select Algorithm"
+                      description="Tree: Handles larger data sets, Linear: Best for focused predictions Neural: (not implemented yet)."
                     >
                       <Select value={trainingModel} onValueChange={setTrainingModel}>
                         <SelectTrigger className="border-gray-300 hover:border-[#94BAEB]">
