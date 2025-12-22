@@ -1,0 +1,14 @@
+# backend/app/database/Dockerfile.db-init
+FROM python:3.13-slim
+
+WORKDIR /app
+
+# Install backend deps (same requirements file as web uses)
+COPY backend/requirements.txt ./requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy only what db-init needs (backend code)
+COPY backend ./backend
+
+# Default command can be overridden by compose, but it's nice to have
+CMD ["python", "backend/app/database/db_init.py"]
