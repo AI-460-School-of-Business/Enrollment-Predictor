@@ -8,6 +8,7 @@ project's FeatureEngineer, and produce predictions. Exposes a simple
 This file is intentionally lightweight and does not start any servers. The
 Flask app should import `flask_predict` and call it with the parsed JSON body.
 """
+
 from __future__ import annotations
 
 import pickle
@@ -16,17 +17,20 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 import pandas as pd
 
-from data.feature_engineer import FeatureEngineer
-from utils.db_config import DB_CONFIG
+from ml.data.feature_engineer import FeatureEngineer
+from ml.utils.db_config import DB_CONFIG
 import psycopg2
 import os
 from glob import glob
 
 
-def load_saved_model(model_path: str) -> Tuple[Any, Optional[List[str]]]:
+# Default model to use when none provided / found in MODEL_DIR
+DEFAULT_MODEL_PATH = "backend/data/prediction_models/enrollment_tree_min_20251209_181054.pkl"
+
+def load_saved_model(model_path: str) -> Tuple[Any, Optional[List[str]], Optional[Any], Optional[Dict]]:
     """Load a pickled model from disk.
 
-    Returns a tuple (model, feature_columns) where feature_columns may be None
+    Returns a tuple (model, feature_columns, scaler, label_encoders) where some may be None
     if the saved object did not include them.
     """
     p = Path(model_path)
@@ -37,14 +41,18 @@ def load_saved_model(model_path: str) -> Tuple[Any, Optional[List[str]]]:
         saved = pickle.load(fh)
 
     if isinstance(saved, dict):
-        # Common saved layout: {"model": estimator, "feature_columns": [...]}
+        # Common saved layout: {"model": estimator, "feature_columns": [...], "scaler": ..., "label_encoders": ...}
         model = saved.get("model") or saved.get("estimator") or next(iter(saved.values()))
         feature_columns = saved.get("feature_columns") or saved.get("feature_cols")
+        scaler = saved.get("scaler")
+        label_encoders = saved.get("label_encoders", {})
     else:
         model = saved
         feature_columns = getattr(model, "feature_columns", None)
+        scaler = getattr(model, "scaler", None)
+        label_encoders = getattr(model, "label_encoders", {})
 
-    return model, feature_columns
+    return model, feature_columns, scaler, label_encoders
 
 
 def prepare_features(raw_rows: Iterable[Dict], features: str = "min") -> Tuple[pd.DataFrame, Optional[List[str]]]:
@@ -88,7 +96,7 @@ def predict_with_model(model_path: str, raw_rows: Iterable[Dict], features: str 
       - feature_columns: list of columns used (if available)
       - count: number of rows predicted
     """
-    model, saved_feature_cols = load_saved_model(model_path)
+    model, saved_feature_cols, scaler, label_encoders = load_saved_model(model_path)
 
     X, fe_feature_cols = prepare_features(raw_rows, features)
 
@@ -102,14 +110,39 @@ def predict_with_model(model_path: str, raw_rows: Iterable[Dict], features: str 
             raise ValueError(f"Missing expected feature columns: {missing}")
         X = X.loc[:, expected_cols]
 
-    # Some models expect a numpy array; scikit-learn accepts DataFrame too.
-    preds = model.predict(X)
+    # Apply the same preprocessing as during training
+    X_processed = X.copy()
+    
+    # Apply label encoding to categorical features
+    if label_encoders:
+        for col, le in label_encoders.items():
+            if col in X_processed.columns:
+                # Convert to string and handle unknown categories
+                col_values = X_processed[col].astype(str)
+                unique_values = set(col_values)
+                known_values = set(le.classes_)
+                unknown_values = unique_values - known_values
+                
+                if unknown_values:
+                    # Replace unknown values with the most frequent known value
+                    most_frequent = le.classes_[0]
+                    col_values = col_values.replace(list(unknown_values), most_frequent)
+                
+                X_processed[col] = le.transform(col_values)
+    
+    # Apply scaling if scaler was saved
+    if scaler:
+        X_processed = scaler.transform(X_processed)
+
+    # Make predictions
+    preds = model.predict(X_processed)
 
     # Convert predictions to plain Python types
     preds_list = [float(p) for p in preds]
 
     return {
         "predictions": preds_list,
+        "features": X.to_dict(orient='records'),
         "feature_columns": expected_cols,
         "count": len(preds_list),
     }
@@ -127,7 +160,7 @@ def flask_predict(payload: Dict) -> Dict[str, Any]:
 
     Returns a JSON-serializable dict suitable for use as a Flask response.
     """
-    model_path = payload.get("model_path") or "/app/data/prediction_models/enrollment_model.pkl"
+    model_path = payload.get("model_path") or DEFAULT_MODEL_PATH
     features = payload.get("features", "min")
     rows = payload.get("rows")
 
@@ -157,7 +190,7 @@ def _choose_model_path(payload: Dict) -> str:
       4. newest .pkl in model_dir
     """
     model_path = payload.get("model_path")
-    model_dir = Path(payload.get("model_dir") or os.getenv("MODEL_DIR") or "/app/data/prediction_models")
+    model_dir = Path(payload.get("model_dir") or os.getenv("MODEL_DIR") or "backend/data/prediction_models")
 
     if model_path:
         return str(Path(model_path))
@@ -176,7 +209,11 @@ def _choose_model_path(payload: Dict) -> str:
     if all_models:
         return str(all_models[0])
 
-    raise FileNotFoundError(f"No model files found in {model_dir}")
+    # Final fallback: explicit default model path (if it exists)
+    if Path(DEFAULT_MODEL_PATH).exists():
+        return str(Path(DEFAULT_MODEL_PATH))
+
+    raise FileNotFoundError(f"No model files found in {model_dir} and default model not present: {DEFAULT_MODEL_PATH}")
 
 
 def sql_predict(payload: Dict) -> Dict[str, Any]:

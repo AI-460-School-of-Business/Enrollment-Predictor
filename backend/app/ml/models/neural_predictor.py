@@ -9,8 +9,8 @@ import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
 
-from models.base_predictor import EnrollmentPredictor
-from utils.evaluation import analyze_per_course_accuracy
+from .base_predictor import EnrollmentPredictor
+from ..utils.evaluation import analyze_per_course_accuracy
 
 
 class NeuralNetworkPredictor(EnrollmentPredictor):

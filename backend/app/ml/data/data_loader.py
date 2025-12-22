@@ -3,7 +3,7 @@ from typing import Dict, List, Any, Optional
 import pandas as pd
 import psycopg2
 import psycopg2.extras
-from utils.db_config import DB_CONFIG
+from ml.utils.db_config import DB_CONFIG
 
 
 class DataLoader:
