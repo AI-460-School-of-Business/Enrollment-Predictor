@@ -14,8 +14,42 @@ import time
 import subprocess
 from pathlib import Path
 
-# Add the server directory to Python path so we can import our modules
-sys.path.insert(0, '/app/server')
+SCRIPT_DIR = Path(__file__).resolve().parent
+APP_DIR = SCRIPT_DIR.parent
+BACKEND_ROOT = APP_DIR.parent
+
+# Add the backend/app directory to Python path so we can import our modules
+sys.path.insert(0, str(APP_DIR))
+
+DATA_DIR_CANDIDATES = [
+    Path("/app/data"),
+    BACKEND_ROOT / "data",
+]
+
+DATABASE_DIR = APP_DIR / "database"
+READ_CSV_SCRIPT = DATABASE_DIR / "read_csv.py"
+GENERATE_FEATURES_SCRIPT = DATABASE_DIR / "generate_auto_features.py"
+
+
+def _find_data_subdir(subdir_name: str):
+    """Return the first existing data subdir, checking both /app/data and backend/data."""
+    for base in DATA_DIR_CANDIDATES:
+        candidate = base / subdir_name
+        if candidate.exists():
+            return candidate
+    return None
+
+
+def _ensure_data_subdir(subdir_name: str) -> Path:
+    """Return a writable data subdir path, creating the /app/data structure if needed."""
+    existing = _find_data_subdir(subdir_name)
+    if existing is not None:
+        return existing
+
+    base = DATA_DIR_CANDIDATES[0]
+    target = base / subdir_name
+    target.mkdir(parents=True, exist_ok=True)
+    return target
 
 try:
     import psycopg2
@@ -70,21 +104,19 @@ def check_existing_data():
 
 def check_sql_files():
     """Check if SQL files exist in data/sql directory."""
-    sql_dir = Path("/app/data/sql")
-    if not sql_dir.exists():
+    sql_dir = _find_data_subdir("sql")
+    if not sql_dir:
         return []
-    
-    sql_files = list(sql_dir.glob("*.sql"))
-    return sql_files
+
+    return list(sql_dir.glob("*.sql"))
 
 def check_csv_files():
     """Check if CSV files exist in data/csv directory."""
-    csv_dir = Path("/app/data/csv")
-    if not csv_dir.exists():
+    csv_dir = _find_data_subdir("csv")
+    if not csv_dir:
         return []
-    
-    csv_files = list(csv_dir.glob("*.csv"))
-    return csv_files
+
+    return list(csv_dir.glob("*.csv"))
 
 def run_sql_files(sql_files):
     """Execute SQL files in the database."""
@@ -118,14 +150,15 @@ def run_sql_files(sql_files):
 def run_csv_import_with_sql_export():
     """Run CSV import and also generate SQL dumps for future use."""
     try:
-        # Change to app directory
-        os.chdir("/app")
+        if not READ_CSV_SCRIPT.exists():
+            print(f"read_csv.py not found at {READ_CSV_SCRIPT}")
+            return False
         
         # First, generate SQL dumps from CSV files
         print("Generating SQL dumps from CSV files...")
         export_result = subprocess.run([
             sys.executable, 
-            "server/database/read_csv.py", 
+            str(READ_CSV_SCRIPT), 
             "--export-sql"
         ], capture_output=True, text=True)
         
@@ -146,7 +179,7 @@ def run_csv_import_with_sql_export():
         print("Running direct CSV import...")
         result = subprocess.run([
             sys.executable, 
-            "server/database/read_csv.py", 
+            str(READ_CSV_SCRIPT), 
             "--import-all"
         ], capture_output=True, text=True)
         
@@ -171,10 +204,14 @@ def run_csv_import_with_sql_export():
 def generate_feature_schema():
     """Generate auto feature schema from imported data."""
     try:
+        if not GENERATE_FEATURES_SCRIPT.exists():
+            print(f"generate_auto_features.py not found at {GENERATE_FEATURES_SCRIPT}")
+            return
+
         print("Generating feature schema from database...")
         result = subprocess.run([
             sys.executable, 
-            "server/database/generate_auto_features.py"
+            str(GENERATE_FEATURES_SCRIPT)
         ], capture_output=True, text=True)
         
         if result.returncode == 0:
@@ -194,7 +231,7 @@ def export_data_on_shutdown():
         # Export SQL dumps
         export_result = subprocess.run([
             sys.executable, 
-            "server/database/read_csv.py", 
+            str(READ_CSV_SCRIPT), 
             "--export-sql"
         ], capture_output=True, text=True)
         
@@ -226,7 +263,8 @@ def main():
     # Check for SQL files first (preferred method)
     sql_files = check_sql_files()
     if sql_files:
-        print(f"Found {len(sql_files)} SQL files in /app/data/sql/:")
+        sql_dir = _find_data_subdir("sql") or Path("/app/data/sql")
+        print(f"Found {len(sql_files)} SQL files in {sql_dir}:")
         for sql_file in sql_files:
             print(f"  - {sql_file}")
         
@@ -240,10 +278,13 @@ def main():
     # Fallback to CSV import
     csv_files = check_csv_files()
     if not csv_files:
-        print("No SQL files in /app/data/sql/ and no CSV files found in /app/data/csv/. Skipping import.")
+        sql_dir = _find_data_subdir("sql") or Path("/app/data/sql")
+        csv_dir = _find_data_subdir("csv") or Path("/app/data/csv")
+        print(f"No SQL files in {sql_dir} and no CSV files found in {csv_dir}. Skipping import.")
         return
     
-    print(f"Found {len(csv_files)} CSV files in /app/data/csv/:")
+    csv_dir = _find_data_subdir("csv") or Path("/app/data/csv")
+    print(f"Found {len(csv_files)} CSV files in {csv_dir}:")
     for csv_file in csv_files:
         print(f"  - {csv_file}")
     
