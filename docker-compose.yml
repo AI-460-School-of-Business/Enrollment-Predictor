@@ -48,7 +48,6 @@ services:
     depends_on:
       - web
     volumes:
-      # Optional (recommended for dev hot reload):
       - ./frontend:/app
       - /app/node_modules
 
