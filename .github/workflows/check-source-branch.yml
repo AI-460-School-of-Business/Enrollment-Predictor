@@ -1,0 +1,21 @@
+# This ensures that only the develop branch can be merged into main. 
+name: Check source branch
+on:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+    branches:
+      - main
+
+jobs:
+  check-branch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check if source branch is develop
+        run: |
+          if [ "${{ github.head_ref }}" != "develop" ]; then
+            echo "Error: Pull requests to 'main' are only allowed from the 'develop' branch."
+            exit 1
+          fi
