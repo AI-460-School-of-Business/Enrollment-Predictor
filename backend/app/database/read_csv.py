@@ -12,6 +12,30 @@ import psycopg2.extras
 from pathlib import Path
 import argparse
 
+SCRIPT_DIR = Path(__file__).resolve().parent
+APP_DIR = SCRIPT_DIR.parent
+BACKEND_ROOT = APP_DIR.parent
+
+DATA_DIR_CANDIDATES = [
+    Path("/app/data"),
+    BACKEND_ROOT / "data",
+]
+
+def _resolve_data_dir(subdir: str, ensure_exists: bool = False) -> Path:
+    """
+    Return the first data subdirectory that exists. If none exist, fall back to
+    /app/data/<subdir> (creating it when ensure_exists=True).
+    """
+    for base in DATA_DIR_CANDIDATES:
+        candidate = base / subdir
+        if candidate.exists():
+            return candidate
+
+    fallback = DATA_DIR_CANDIDATES[0] / subdir
+    if ensure_exists:
+        fallback.mkdir(parents=True, exist_ok=True)
+    return fallback
+
 # Database configuration
 DB_CONFIG = {
     "host": os.getenv("DB_HOST", "db"),
@@ -155,7 +179,7 @@ def import_csv_file(csv_path, table_name=None):
 
 def import_all_csv_files():
     """Import all CSV files from the data/csv directory."""
-    csv_dir = Path("/app/data/csv")
+    csv_dir = _resolve_data_dir("csv")
     if not csv_dir.exists():
         print("CSV directory not found")
         return False
@@ -197,8 +221,7 @@ def export_sql_dumps():
             return False
         
         # Create SQL export directory
-        sql_dir = Path("/app/data/sql")
-        sql_dir.mkdir(exist_ok=True)
+        sql_dir = _resolve_data_dir("sql", ensure_exists=True)
         
         for table_name in tables:
             print(f"Exporting table: {table_name}")
