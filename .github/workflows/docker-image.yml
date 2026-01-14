@@ -24,7 +24,7 @@ jobs:
             context: frontend
           - image: db-init-1
             dockerfile: backend/app/database/Dockerfile.db-init
-            context: backend/app/database
+            context: .
 
     steps:
       - name: Checkout
