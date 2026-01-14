@@ -21,7 +21,7 @@ jobs:
             context: .
           - image: client-1
             dockerfile: frontend/Dockerfile.client
-            context: frontend
+            context: .
           - image: db-init-1
             dockerfile: backend/app/database/Dockerfile.db-init
             context: .
