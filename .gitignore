@@ -48,3 +48,24 @@ node_modules/
 # Temporary files
 /tmp/
 *.log
+
+# SQL data files
+*.sql
+backend/data/sql/
+
+# Raw data files (CSV)
+backend/data/csv/
+
+# Generated / exported reports
+frontend/reports/
+
+# Generated test results
+backend/app/ml/test_results/
+
+# Trained ML model artifacts
+*.pkl
+backend/data/prediction_models/
+
+# Excel files (generated exports)
+*.xlsx
+*.xls
